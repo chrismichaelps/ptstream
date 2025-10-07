@@ -23,6 +23,7 @@ import {
   toUpper,
 } from "lodash";
 import { useTranslation } from "react-i18next";
+import qs from "qs";
 
 import { PromoResult, PromoReturnType, UniqueSerie } from "../../types";
 import SeriesDropdown from "../../components/SeasonsDropdown";
@@ -90,7 +91,17 @@ const StreamingVideo = ({
 
   const onLoad = () => setIsLoading(false);
 
-  const src = `https://vidsrc.pro/embed/tv/${serieId}/${seasonId}/${episodeId}`;
+  // const src = `https://vidsrc.pro/embed/tv/${serieId}/${seasonId}/${episodeId}`;
+
+  const query = {
+    tmdb: serieId,
+    season: seasonId,
+    episode: episodeId,
+    ds_lang: "es",
+  };
+  const queryString = qs.stringify(query);
+
+  const src = `https://vidsrc.xyz/embed/tv?${queryString}`;
 
   return (
     <div className="fixed inset-0 text-black bg-gradient-to-br from-black to-gray-900 dark:text-white">
@@ -121,7 +132,8 @@ const StreamingVideo = ({
 
       <div
         className={`relative w-full h-full ${
-          isFloating ? "animate-iframe-drop-effect" : ""}`}
+          isFloating ? "animate-iframe-drop-effect" : ""
+        }`}
       >
         <iframe
           src={src}

@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { join, map, merge, range, toUpper } from "lodash";
 import { useTranslation } from "react-i18next";
+import qs from "qs";
 
 import { PromoResult, PromoReturnType, UniqueMovie } from "../../types";
 import { parseDate } from "../../toolkit/serie";
@@ -58,7 +59,12 @@ const StreamingVideo = ({ movie: { id }, onBack }: StreamingVideoProps) => {
   const { toggleFullscreen, isFullscreen } = useFullscreen();
 
   const onLoad = () => setIsLoading(false);
-  const src = `https://vidsrc.pro/embed/movie/${id}`;
+  // const src = `https://vidsrc.pro/embed/movie/${id}`;
+  const query = {
+    ds_lang: "es",
+  };
+  const queryString = qs.stringify(query);
+  const src = `https://vidsrc.xyz/embed/movie/${id}?${queryString}`;
 
   return (
     <div className="fixed inset-0 text-black bg-gradient-to-br from-black to-gray-900 dark:text-white">
@@ -89,7 +95,8 @@ const StreamingVideo = ({ movie: { id }, onBack }: StreamingVideoProps) => {
 
       <div
         className={`relative w-full h-full ${
-          isFloating ? "animate-iframe-drop-effect" : ""}`}
+          isFloating ? "animate-iframe-drop-effect" : ""
+        }`}
       >
         <iframe
           src={src}
