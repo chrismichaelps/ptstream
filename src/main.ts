@@ -35,6 +35,24 @@ const createWindow = () => {
     blocker.enableBlockingInSession(session.defaultSession);
   });
 
+  // Block popup windows and external views
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    console.log('Popup blocked:', url);
+    return { action: 'deny' }; // Block all popups
+  });
+
+  // Block new window requests
+  mainWindow.webContents.on('did-attach-webview', (event) => {
+    console.log('Webview attachment blocked');
+    event.preventDefault();
+  });
+
+  // Block external navigation
+  mainWindow.webContents.on('will-navigate', (event, navigationUrl) => {
+    console.log('External navigation blocked:', navigationUrl);
+    event.preventDefault();
+  });
+
   // Open the DevTools.
   mainWindow.webContents.openDevTools();
 };
