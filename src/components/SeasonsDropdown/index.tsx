@@ -64,7 +64,7 @@ export default function SeriesDropdown({
 
   useEffect(() => {
     if (selectedSeason) {
-      seasonSelectedState.set("seasonSelected", selectedSeason);
+      seasonSelectedState.set(selectedSeason);
       mutateChapter({
         serieId: id,
         seasonId: selectedSeasonIndex,

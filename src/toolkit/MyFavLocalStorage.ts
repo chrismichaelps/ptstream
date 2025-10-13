@@ -1,6 +1,6 @@
 import { has, omit, orderBy } from 'lodash';
 import { Effect } from 'effect';
-import { StorageService } from '../services/StorageService';
+import { StorageService } from '../../packages/services';
 
 const STORAGE_KEY = 'my-favorites';
 

@@ -1,15 +1,14 @@
 import { useState, useCallback, Fragment, useEffect, useRef } from "react";
-import { useSelector } from "react-redux";
 import { useDisclosure } from "@nextui-org/react";
 import { unionBy, set, size } from "lodash";
 import { useTranslation } from "react-i18next";
+import { useSelectedGenre } from "../../../../packages/store";
 
 import { SerieResult, SerieReturnType, UniqueSerie } from "../../../types";
 import useSeries from "../../../hooks/useSeries";
 import { SerieTableContainer } from "../../TableContainer";
 import { ModalContainer } from "../../ModalContainer";
 import { SerieSection } from "../../Section";
-import { RootState } from "../../../redux/store";
 import ScrollToTopButton from "../../../components/ScrollToTopButton";
 import { GENRE_RESET_FILTER } from "../../../constants";
 import useSeasonSelected from "../../../hooks/useSeasonSelected";
@@ -33,9 +32,7 @@ export default function SerieScene() {
 
   const prevGenreRef = useRef<number>(GENRE_RESET_FILTER);
 
-  const currentGenre = useSelector(
-    (state: RootState) => state.genre.selectedGenre
-  );
+  const currentGenre = useSelectedGenre();
 
   const { t } = useTranslation();
 

@@ -6,7 +6,11 @@ import { useTranslation } from "react-i18next";
 import { TFunction } from "i18next";
 import { Effect, pipe } from "effect";
 
-import useSearchState from "../../hooks/useSearchState";
+import {
+  useStoreDispatch,
+  resetSearchState,
+  clearSearchQuery,
+} from "../../../packages/store";
 
 type Key = "home" | "search" | "myFavorites";
 
@@ -32,7 +36,7 @@ export default function NavBar() {
 
   const [selected, setSelected] = useState<Key>("home");
 
-  const searchState = useSearchState();
+  const dispatch = useStoreDispatch();
 
   useEffect(() => {
     pipe(
@@ -46,7 +50,12 @@ export default function NavBar() {
     pipe(
       Effect.sync(() => key),
       Effect.tap((k) => Effect.sync(() => setSelected(k))),
-      Effect.tap(() => Effect.sync(() => searchState.clear())),
+      Effect.tap(() =>
+        Effect.sync(() => {
+          dispatch(resetSearchState());
+          dispatch(clearSearchQuery());
+        })
+      ),
       Effect.runSync
     );
 

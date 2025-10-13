@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useMemo } from "react";
 import { Effect } from "effect";
 import { useEffect, useEffectSync } from "./EffectContext";
-import { LanguageService } from "../services/LanguageService";
+import { LanguageService } from "../../packages/services";
 
 const LanguageContext = createContext();
 

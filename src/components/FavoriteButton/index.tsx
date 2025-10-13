@@ -3,7 +3,7 @@ import { Effect } from "effect";
 import { Heart, HeartCrack } from "lucide-react";
 import { motion } from "framer-motion";
 import { useEffectSync } from "../../contexts/EffectContext";
-import { StorageServiceLive } from "../../services/StorageService";
+import { StorageServiceLive } from "../../../packages/services";
 import * as MyFavLocalStorage from "../../toolkit/MyFavLocalStorage";
 
 type FavoriteButtonProps = {

@@ -46,7 +46,6 @@
     "@nextui-org/react": "^2.6.11",
     "@nextui-org/system": "^2.4.6",
     "@react-stately/data": "^3.14.1",
-    "@reduxjs/toolkit": "^2.9.0",
     "@tanstack/react-query": "^5.90.2",
     "@types/lodash": "^4.17.20",
     "@types/qs": "^6.14.0",
@@ -54,7 +53,6 @@
     "@types/react-dom": "^19.2.2",
     "@types/react-helmet": "^6.1.11",
     "@types/react-router-dom": "^5.3.3",
-    "@types/redux-logger": "^3.0.13",
     "@types/tailwindcss": "^3.1.0",
     "autoprefixer": "^10.4.21",
     "effect": "^3.18.4",
@@ -77,9 +75,7 @@
     "react-helmet": "^6.1.0",
     "react-i18next": "^16.0.0",
     "react-infinite-scroll-component": "^6.1.0",
-    "react-redux": "^9.2.0",
     "react-router-dom": "^7.9.4",
-    "redux-logger": "^3.0.6",
     "tailwindcss": "^3.4.10"
   },
   "packageManager": "yarn@1.22.22+sha1.ac34549e6aa8e7ead463a7407e1c7390f61a6610"

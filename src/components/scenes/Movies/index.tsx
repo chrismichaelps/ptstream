@@ -1,15 +1,14 @@
 import { useState, useCallback, Fragment, useRef, useEffect } from "react";
-import { useSelector } from "react-redux";
 import { useDisclosure } from "@nextui-org/react";
 import { set, size, unionBy } from "lodash";
 import { useTranslation } from "react-i18next";
+import { useSelectedGenre } from "../../../../packages/store";
 
 import { MovieResult, MovieReturnType, UniqueMovie } from "../../../types";
 import useMovies from "../../../hooks/useMovies";
 import { MovieTableContainer } from "../../TableContainer";
 import { ModalContainer } from "../../ModalContainer";
 import { MovieSection } from "../../Section";
-import { RootState } from "../../../redux/store";
 import ScrollToTopButton from "../../../components/ScrollToTopButton";
 import { GENRE_RESET_FILTER } from "../../../constants";
 import SeoContainer from "../../SeoContainer";
@@ -32,9 +31,7 @@ export default function MovieScene() {
 
   const prevGenreRef = useRef<number>(GENRE_RESET_FILTER);
 
-  const currentGenre = useSelector(
-    (state: RootState) => state.genre.selectedGenre
-  );
+  const currentGenre = useSelectedGenre();
 
   const { t } = useTranslation();
 

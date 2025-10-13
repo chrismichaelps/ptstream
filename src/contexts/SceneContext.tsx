@@ -1,15 +1,11 @@
 import { createContext, ReactNode, useContext } from "react";
-import { useSelector } from "react-redux";
-
-import { RootState } from "../redux/store";
+import { useCurrentScene } from "../../packages/store";
 import { Scene } from "../types";
 
 const SceneContext = createContext<Scene | null>(null);
 
 export const SceneProvider = ({ children }: { children: ReactNode }) => {
-  const currentScene = useSelector(
-    (state: RootState) => state.scene.currentScene
-  );
+  const currentScene = useCurrentScene() as Scene;
 
   return (
     <SceneContext.Provider value={currentScene}>

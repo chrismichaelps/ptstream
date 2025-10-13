@@ -1,5 +1,4 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Provider, useDispatch, useSelector } from "react-redux";
 import {
   Route,
   BrowserRouter as Router,
@@ -11,20 +10,26 @@ import { NextUIProvider, Switch } from "@nextui-org/react";
 import { ThemeProvider as NextThemesProvider, useTheme } from "next-themes";
 import { I18nextProvider } from "react-i18next";
 import { EffectProvider } from "./contexts/EffectContext";
+import {
+  StoreProvider,
+  useCurrentScene,
+  useSelectedGenre,
+  useStoreDispatch,
+  setScene,
+  setGenre,
+  resetGenre,
+} from "../packages/store";
 
 import Root from "./scenes/root";
 import TvIcon from "./components/Icons/TvIcon";
 import MovieIcon from "./components/Icons/MovieIcon";
 import Search from "./components/scenes/Search";
 import MyFa from "./components/scenes/MyFavorites";
-import { setScene } from "./redux/scenes/sceneSlice";
 import NavBar from "./components/NavBar";
 import Footer from "./components/Footer";
 import GenreSelector from "./components/GenreSelector";
 import Setting from "./components/Setting";
-import { AppDispatch, RootState, store } from "./redux/store";
 import { Scene, SceneProps } from "./types";
-import { setGenre } from "./redux/genre/genreSlice";
 import i18n from "./localization/i18n";
 
 import "./index.css";
@@ -43,17 +48,13 @@ const scenes: Record<Scene, SceneProps> = {
 function App() {
   const { resolvedTheme } = useTheme();
   const location = useLocation();
-  const dispatch = useDispatch<AppDispatch>();
+  const dispatch = useStoreDispatch();
 
-  const currentScene = useSelector(
-    (state: RootState) => state.scene.currentScene
-  );
-  const selectedGenre = useSelector(
-    (state: RootState) => state.genre.selectedGenre
-  );
+  const currentScene = useCurrentScene() || "series";
+  const selectedGenre = useSelectedGenre();
 
   const reset = () => {
-    dispatch(setGenre(null));
+    dispatch(resetGenre());
   };
 
   const switchScene = (scene: Scene) => {
@@ -70,7 +71,7 @@ function App() {
     switchScene(newScene);
   };
 
-  const SceneIcon = scenes[currentScene].icon;
+  const SceneIcon = scenes[currentScene as Scene]?.icon || TvIcon;
 
   return (
     <div
@@ -118,10 +119,10 @@ function App() {
 const root = createRoot(document.getElementById("root"));
 root.render(
   <EffectProvider>
-    <NextUIProvider>
-      <QueryClientProvider client={queryClient}>
-        <NextThemesProvider attribute="class" defaultTheme="light">
-          <Provider store={store}>
+    <StoreProvider>
+      <NextUIProvider>
+        <QueryClientProvider client={queryClient}>
+          <NextThemesProvider attribute="class" defaultTheme="light">
             <I18nextProvider i18n={i18n}>
               <Router>
                 <div className="px-2 mx-1 sm:mx-2 lg:mx-4">
@@ -129,9 +130,9 @@ root.render(
                 </div>
               </Router>
             </I18nextProvider>
-          </Provider>
-        </NextThemesProvider>
-      </QueryClientProvider>
-    </NextUIProvider>
+          </NextThemesProvider>
+        </QueryClientProvider>
+      </NextUIProvider>
+    </StoreProvider>
   </EffectProvider>
 );

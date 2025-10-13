@@ -1,6 +1,6 @@
 import { some, filter, orderBy, uniqBy } from 'lodash';
 import { Effect } from 'effect';
-import { StorageService } from '../services/StorageService';
+import { StorageService } from '../../packages/services';
 
 const STORAGE_CHAPTERS_WATCHED_KEY = 'chapters-watched';
 

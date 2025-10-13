@@ -9,7 +9,18 @@ import { MovieSection, SerieSection } from "../../Section";
 import ScrollToTopButton from "../../../components/ScrollToTopButton";
 import useSearchHandler from "../../../hooks/useSearchHandler";
 import { MediaType } from "../../../types";
-import useSearchState from "../../../hooks/useSearchState";
+import {
+  useSearchRecords,
+  useSelectedRecord,
+  useTotalRecords,
+  useCurrentPage,
+  useStoreDispatch,
+  setSearchRecords,
+  setCurrentPage,
+  setTotalRecords,
+  setSelectedRecord,
+  setSearchQuery,
+} from "../../../../packages/store";
 import SeoContainer from "../../../components/SeoContainer";
 
 const defaultSearchTerms = [
@@ -72,15 +83,15 @@ const ModalContent = ({
 };
 
 const SerieScene = () => {
-  const searchState = useSearchState();
   const { isOpen, onOpen, onClose } = useDisclosure();
-
   const { t } = useTranslation();
 
-  const records = searchState.get("records");
-  const record = searchState.get("record");
-  const totalRecords = searchState.get("totalRecords");
-  const page = searchState.get("page");
+  // Store-based state hooks
+  const records = useSearchRecords();
+  const record = useSelectedRecord();
+  const totalRecords = useTotalRecords();
+  const page = useCurrentPage();
+  const dispatch = useStoreDispatch();
 
   const showScrollToTop = size(records) >= 100;
 
@@ -93,22 +104,21 @@ const SerieScene = () => {
     (data) => {
       const filteredResults = filterOutMediaTypes(["person"], data.results);
 
-      searchState.set("records", filteredResults);
-      searchState.set("page", data.page);
-      searchState.set("totalRecords", data.total_pages);
+      dispatch(setSearchRecords(filteredResults));
+      dispatch(setCurrentPage(data.page));
+      dispatch(setTotalRecords(data.total_pages));
     },
     (searchQuery: string) => {
-      searchState.set("inputValue", searchQuery);
+      dispatch(setSearchQuery(searchQuery));
     }
   );
 
   const handleOpenModal = (recordSelected: any) => {
-    searchState.set("record", recordSelected);
+    dispatch(setSelectedRecord(recordSelected));
     onOpen();
   };
 
-  const handleSelectTerm = (term: string) =>
-    searchState.set("inputValue", term);
+  const handleSelectTerm = (term: string) => dispatch(setSearchQuery(term));
 
   return (
     <Fragment>

@@ -7,7 +7,12 @@ import { SerieResult, UniqueSerie } from "../../types";
 import { SearchIcon } from "../Icons/SearchIcon";
 import TvIcon from "../Icons/TvIcon";
 import MovieIcon from "../Icons/MovieIcon";
-import useSearchState from "../../hooks/useSearchState";
+import {
+  useSearchQuery,
+  useStoreDispatch,
+  setSearchQuery,
+  clearSearchQuery,
+} from "../../../packages/store";
 
 type TableContainerProps = {
   rows: SerieResult;
@@ -26,9 +31,8 @@ export const TableContainer = ({
 }: TableContainerProps) => {
   const { t } = useTranslation();
 
-  const searchState = useSearchState();
-
-  const term = searchState.get("inputValue");
+  const dispatch = useStoreDispatch();
+  const term = useSearchQuery();
 
   const renderUserCard = useCallback(
     (row: UniqueSerie) => {
@@ -102,8 +106,8 @@ export const TableContainer = ({
               isLoading ? <Spinner size="sm" color="default" /> : null
             }
             value={term}
-            onValueChange={(value) => searchState.set("inputValue", value)}
-            onClear={() => searchState.clear()}
+            onValueChange={(value) => dispatch(setSearchQuery(value))}
+            onClear={() => dispatch(clearSearchQuery())}
           />
         </div>
       </div>

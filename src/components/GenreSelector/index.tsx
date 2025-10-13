@@ -6,11 +6,10 @@ import {
   DropdownTrigger,
   DropdownMenu,
 } from "@nextui-org/react";
-import { useSelector } from "react-redux";
 import { map, sortBy } from "lodash";
 import { useTranslation } from "react-i18next";
+import { useCurrentScene } from "../../../packages/store";
 
-import { RootState } from "../../redux/store";
 import { VerticalDotsIcon } from "../Icons/VerticalDotsIcon";
 import { moviesGenres, tvSeriesGenres } from "../../constants";
 
@@ -22,19 +21,16 @@ type GenreSelectorProps = {
 const GenreSelector: React.FC<GenreSelectorProps> = React.memo(
   ({ selectedGenre, onGenreChange }) => {
     const { t } = useTranslation();
+    const currentScene = useCurrentScene();
 
-    const currentScene = useSelector(
-      (state: RootState) => state.scene.currentScene
-    );
-
-    const getGenres = useMemo(() => {
+    const getGenres = useMemo((): Array<[string, string]> => {
       const genres = currentScene === "series" ? tvSeriesGenres : moviesGenres;
       const entries = Object.entries(genres);
       return sortBy(entries, ([id]) => (id === "0" ? 1 : 0));
     }, [currentScene]);
 
     const selectedKeys = useMemo(
-      () =>
+      (): string[] =>
         selectedGenre ? map([selectedGenre], (key) => key.toString()) : [],
       [selectedGenre]
     );

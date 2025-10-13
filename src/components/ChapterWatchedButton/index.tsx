@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { Effect } from "effect";
 import { useEffectSync } from "../../contexts/EffectContext";
-import { StorageServiceLive } from "../../services/StorageService";
+import { StorageServiceLive } from "../../../packages/services";
 
 import * as ChaptersWatchedLocalStorage from "../../toolkit/ChaptersWatchedLocalStorage";
 

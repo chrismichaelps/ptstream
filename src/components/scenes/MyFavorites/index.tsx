@@ -1,17 +1,16 @@
 import { useState, Fragment, useEffect } from "react";
 import { Chip, useDisclosure } from "@nextui-org/react";
 import { filter, get, includes, map, size } from "lodash";
-import { useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
 import { Effect } from "effect";
 import { useEffectSync } from "../../../contexts/EffectContext";
-import { StorageServiceLive } from "../../../services/StorageService";
+import { StorageServiceLive } from "../../../../packages/services";
+import { useSelectedGenre } from "../../../../packages/store";
 
 import { MyFavoritesTableContainer } from "../../TableContainer";
 import { ModalContainer } from "../../ModalContainer";
 import { MovieSection, SerieSection } from "../../Section";
 import * as MyFavLocalStorage from "../../../toolkit/MyFavLocalStorage";
-import { RootState } from "../../../redux/store";
 import ScrollToTopButton from "../../../components/ScrollToTopButton";
 import { MediaType } from "../../../types";
 import SeoContainer from "../../../components/SeoContainer";
@@ -67,17 +66,25 @@ export default function MyFavoriteScene() {
 
   const { t } = useTranslation();
 
-  const currentGenre = useSelector(
-    (state: RootState) => state.genre.selectedGenre
-  );
+  const currentGenre = useSelectedGenre();
 
+  // Get items from storage
   const items = useEffectSync(
     MyFavLocalStorage.getAllLikedItems().pipe(
       Effect.provide(StorageServiceLive)
     )
   );
 
-  const [myFavorites, setMyFavorites] = useState(transformMyFavorites(items));
+  // Transform items to array format
+  const transformedItems = transformMyFavorites(items);
+
+  // Calculate filtered favorites based on current genre
+  const myFavorites =
+    currentGenre > 0
+      ? filter(transformedItems, (item) =>
+          includes(item.genre_ids, currentGenre)
+        )
+      : transformedItems;
 
   const showScrollToTop = size(myFavorites) >= 100;
 
@@ -95,20 +102,29 @@ export default function MyFavoriteScene() {
     },
   };
 
-  // filter items by genre if currentGenre is not 0
-  // else reset state to default items
+  // Set loading to false after items are loaded and refresh when items change
   useEffect(() => {
-    setIsLoading(true);
-    const filteredFavorites =
-      currentGenre > 0
-        ? filter(transformMyFavorites(items), (item) =>
-            includes(item.genre_ids, currentGenre)
-          )
-        : transformMyFavorites(items);
-
-    setMyFavorites(filteredFavorites);
     setIsLoading(false);
-  }, [currentGenre]);
+  }, [items]);
+
+  // Add a refresh mechanism to prevent flickering
+  const refreshFavorites = () => {
+    setIsLoading(true);
+    // Force a re-render by updating the component
+    setTimeout(() => {
+      setIsLoading(false);
+    }, 100);
+  };
+
+  // Listen for storage changes to refresh favorites
+  useEffect(() => {
+    const handleStorageChange = () => {
+      refreshFavorites();
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, []);
 
   return (
     <Fragment>

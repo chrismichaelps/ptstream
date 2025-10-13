@@ -1,5 +1,13 @@
 import React, { createContext, useContext, useMemo } from "react";
-import { Effect } from "effect";
+import { Effect, Context, Layer } from "effect";
+import { StorageService, StorageServiceLive } from "../../packages/services";
+import { LanguageService, LanguageServiceLive } from "../../packages/services";
+
+// Create Effect context that provides all services
+export const AppServices = Layer.mergeAll(
+  StorageServiceLive,
+  LanguageServiceLive
+);
 
 // Context for providing the Effect runtime
 const EffectContext = createContext<boolean>(false);

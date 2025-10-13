@@ -2,15 +2,13 @@ import { useCallback, useEffect } from "react";
 import { debounce } from "lodash";
 
 import useSearch from "./useSearch";
-import useSearchState from "./useSearchState";
+import { useSearchQuery } from "../../packages/store";
 
 const useSearchHandler = (
   onSuccess: (data: any) => void,
   watchInputSearch: (searchQuery: string) => void
 ) => {
-  const searchState = useSearchState();
-
-  const inputValue = searchState.get("inputValue")
+  const inputValue = useSearchQuery();
 
   const { mutate: mutateSearch, status } = useSearch({
     onSuccess,
