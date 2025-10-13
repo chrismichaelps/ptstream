@@ -3,6 +3,9 @@ import { Chip, useDisclosure } from "@nextui-org/react";
 import { filter, get, includes, map, size } from "lodash";
 import { useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
+import { Effect } from "effect";
+import { useEffectSync } from "../../../contexts/EffectContext";
+import { StorageServiceLive } from "../../../services/StorageService";
 
 import { MyFavoritesTableContainer } from "../../TableContainer";
 import { ModalContainer } from "../../ModalContainer";
@@ -68,7 +71,11 @@ export default function MyFavoriteScene() {
     (state: RootState) => state.genre.selectedGenre
   );
 
-  const items = MyFavLocalStorage.getAllLikedItems();
+  const items = useEffectSync(
+    MyFavLocalStorage.getAllLikedItems().pipe(
+      Effect.provide(StorageServiceLive)
+    )
+  );
 
   const [myFavorites, setMyFavorites] = useState(transformMyFavorites(items));
 

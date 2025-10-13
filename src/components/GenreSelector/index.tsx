@@ -9,7 +9,6 @@ import {
 import { useSelector } from "react-redux";
 import { map, sortBy } from "lodash";
 import { useTranslation } from "react-i18next";
-import { Effect, pipe } from "effect";
 
 import { RootState } from "../../redux/store";
 import { VerticalDotsIcon } from "../Icons/VerticalDotsIcon";
@@ -28,35 +27,23 @@ const GenreSelector: React.FC<GenreSelectorProps> = React.memo(
       (state: RootState) => state.scene.currentScene
     );
 
-    const getGenres = pipe(
-      Effect.sync(() =>
-        currentScene === "series" ? tvSeriesGenres : moviesGenres
-      ),
-      Effect.map((genres) => Object.entries(genres)),
-      Effect.map((entries) => sortBy(entries, ([id]) => (id === "0" ? 1 : 0))),
-      Effect.runSync
-    );
+    const getGenres = useMemo(() => {
+      const genres = currentScene === "series" ? tvSeriesGenres : moviesGenres;
+      const entries = Object.entries(genres);
+      return sortBy(entries, ([id]) => (id === "0" ? 1 : 0));
+    }, [currentScene]);
 
     const selectedKeys = useMemo(
       () =>
-        pipe(
-          Effect.sync(() => selectedGenre),
-          Effect.map((genre) =>
-            genre ? map([genre], (key) => key.toString()) : []
-          ),
-          Effect.runSync
-        ),
+        selectedGenre ? map([selectedGenre], (key) => key.toString()) : [],
       [selectedGenre]
     );
 
     const handleGenreChange = useCallback(
-      (key: string | null) =>
-        pipe(
-          Effect.sync(() => key),
-          Effect.map((k) => (k ? Number(k) : null)),
-          Effect.tap((genre) => Effect.sync(() => onGenreChange(genre))),
-          Effect.runSync
-        ),
+      (key: string | null) => {
+        const genre = key ? Number(key) : null;
+        onGenreChange(genre);
+      },
       [onGenreChange]
     );
 

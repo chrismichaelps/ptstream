@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
-import { Effect, pipe } from "effect";
 import { Eye, EyeOff } from "lucide-react";
 import { Tooltip } from "@nextui-org/react";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
+import { Effect } from "effect";
+import { useEffectSync } from "../../contexts/EffectContext";
+import { StorageServiceLive } from "../../services/StorageService";
 
 import * as ChaptersWatchedLocalStorage from "../../toolkit/ChaptersWatchedLocalStorage";
 
@@ -24,28 +26,31 @@ const ChapterWatchedButton = ({ item }: ChapterWatchedButtonProps) => {
 
   // Check if the chapter is already watched when the component mounts
   useEffect(() => {
-    pipe(
-      Effect.sync(() => ChaptersWatchedLocalStorage.wasChapterSeen(item)),
-      Effect.tap((watched) => Effect.sync(() => setIsWatched(watched))),
-      Effect.runSync
+    const watched = useEffectSync(
+      ChaptersWatchedLocalStorage.wasChapterSeen(item).pipe(
+        Effect.provide(StorageServiceLive)
+      )
     );
+    setIsWatched(watched);
   }, [chapterKey]);
 
-  const toggleWatched = () =>
-    pipe(
-      Effect.sync(() => isWatched),
-      Effect.tap((watched) =>
-        Effect.sync(() => {
-          if (watched) {
-            ChaptersWatchedLocalStorage.removeChapterWatchedItem(item);
-          } else {
-            ChaptersWatchedLocalStorage.addChapterWatchedItem(item);
-          }
-        })
-      ),
-      Effect.tap(() => Effect.sync(() => setIsWatched(!isWatched))),
-      Effect.runSync
-    );
+  const toggleWatched = () => {
+    if (isWatched) {
+      useEffectSync(
+        ChaptersWatchedLocalStorage.removeChapterWatchedItem(item).pipe(
+          Effect.provide(StorageServiceLive)
+        )
+      );
+    } else {
+      useEffectSync(
+        ChaptersWatchedLocalStorage.addChapterWatchedItem(item).pipe(
+          Effect.provide(StorageServiceLive)
+        )
+      );
+    }
+
+    setIsWatched(!isWatched);
+  };
 
   return (
     <motion.button

@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
-import { Effect, pipe } from "effect";
+import { Effect } from "effect";
 import { Heart, HeartCrack } from "lucide-react";
 import { motion } from "framer-motion";
+import { useEffectSync } from "../../contexts/EffectContext";
+import { StorageServiceLive } from "../../services/StorageService";
 import * as MyFavLocalStorage from "../../toolkit/MyFavLocalStorage";
 
 type FavoriteButtonProps = {
@@ -13,28 +15,31 @@ const FavoriteButton = ({ item }: FavoriteButtonProps) => {
 
   // Check if the item is already liked when the component mounts
   useEffect(() => {
-    pipe(
-      Effect.sync(() => MyFavLocalStorage.isItemLiked(item.id)),
-      Effect.tap((liked) => Effect.sync(() => setIsFavorite(liked))),
-      Effect.runSync
+    const liked = useEffectSync(
+      MyFavLocalStorage.isItemLiked(item.id).pipe(
+        Effect.provide(StorageServiceLive)
+      )
     );
+    setIsFavorite(liked);
   }, [item.id]);
 
-  const toggleFavorite = () =>
-    pipe(
-      Effect.sync(() => isFavorite),
-      Effect.tap((favorite) =>
-        Effect.sync(() => {
-          if (favorite) {
-            MyFavLocalStorage.removeLikedItem(item.id);
-          } else {
-            MyFavLocalStorage.addLikedItem(item);
-          }
-        })
-      ),
-      Effect.tap(() => Effect.sync(() => setIsFavorite(!isFavorite))),
-      Effect.runSync
-    );
+  const toggleFavorite = () => {
+    if (isFavorite) {
+      useEffectSync(
+        MyFavLocalStorage.removeLikedItem(item.id).pipe(
+          Effect.provide(StorageServiceLive)
+        )
+      );
+    } else {
+      useEffectSync(
+        MyFavLocalStorage.addLikedItem(item).pipe(
+          Effect.provide(StorageServiceLive)
+        )
+      );
+    }
+
+    setIsFavorite(!isFavorite);
+  };
 
   return (
     <motion.button

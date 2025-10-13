@@ -10,7 +10,7 @@ import { createRoot } from "react-dom/client";
 import { NextUIProvider, Switch } from "@nextui-org/react";
 import { ThemeProvider as NextThemesProvider, useTheme } from "next-themes";
 import { I18nextProvider } from "react-i18next";
-import { Effect, pipe } from "effect";
+import { EffectProvider } from "./contexts/EffectContext";
 
 import Root from "./scenes/root";
 import TvIcon from "./components/Icons/TvIcon";
@@ -52,25 +52,22 @@ function App() {
     (state: RootState) => state.genre.selectedGenre
   );
 
-  const reset = Effect.sync(() => {
+  const reset = () => {
     dispatch(setGenre(null));
-  });
+  };
 
-  const switchScene = (scene: Scene) =>
-    pipe(
-      Effect.sync(() => dispatch(setScene(scene))),
-      Effect.tap(() => reset)
-    );
+  const switchScene = (scene: Scene) => {
+    dispatch(setScene(scene));
+    reset();
+  };
 
-  const handleGenreChange = (genre: number | null) =>
-    Effect.sync(() => dispatch(setGenre(genre)));
+  const handleGenreChange = (genre: number | null) => {
+    dispatch(setGenre(genre));
+  };
 
   const handleSceneSwitch = (e: React.ChangeEvent<HTMLInputElement>) => {
-    pipe(
-      Effect.sync(() => (e.target.checked ? "movies" : ("series" as Scene))),
-      Effect.flatMap(switchScene),
-      Effect.runSync
-    );
+    const newScene = e.target.checked ? "movies" : ("series" as Scene);
+    switchScene(newScene);
   };
 
   const SceneIcon = scenes[currentScene].icon;
@@ -98,9 +95,7 @@ function App() {
           {location.pathname !== "/search" ? (
             <GenreSelector
               selectedGenre={selectedGenre}
-              onGenreChange={(genre) => {
-                Effect.runSync(handleGenreChange(genre));
-              }}
+              onGenreChange={handleGenreChange}
             />
           ) : null}
           <div className="ml-10">
@@ -122,19 +117,21 @@ function App() {
 
 const root = createRoot(document.getElementById("root"));
 root.render(
-  <NextUIProvider>
-    <QueryClientProvider client={queryClient}>
-      <NextThemesProvider attribute="class" defaultTheme="light">
-        <Provider store={store}>
-          <I18nextProvider i18n={i18n}>
-            <Router>
-              <div className="px-2 mx-1 sm:mx-2 lg:mx-4">
-                <App />
-              </div>
-            </Router>
-          </I18nextProvider>
-        </Provider>
-      </NextThemesProvider>
-    </QueryClientProvider>
-  </NextUIProvider>
+  <EffectProvider>
+    <NextUIProvider>
+      <QueryClientProvider client={queryClient}>
+        <NextThemesProvider attribute="class" defaultTheme="light">
+          <Provider store={store}>
+            <I18nextProvider i18n={i18n}>
+              <Router>
+                <div className="px-2 mx-1 sm:mx-2 lg:mx-4">
+                  <App />
+                </div>
+              </Router>
+            </I18nextProvider>
+          </Provider>
+        </NextThemesProvider>
+      </QueryClientProvider>
+    </NextUIProvider>
+  </EffectProvider>
 );
