@@ -2,11 +2,12 @@ import { Effect } from "effect";
 import qs from "qs";
 
 import HttpClientService from "../http-client/HttpClientService";
+import { API_CONFIG } from "../../constants";
 
 export default {
   getPromoById: (id: string) => {
     const query = {
-      api_key: 'a0a7e40dc8162ed7e37aa2fc97db5654',
+      api_key: API_CONFIG.TMDB.API_KEY,
     };
 
     const queryString = qs.stringify(query);
@@ -17,7 +18,7 @@ export default {
     }).pipe(
       Effect.provide(
         HttpClientService.Live({
-          baseUrl: `https://api.themoviedb.org/3/${id}/videos?`,
+          baseUrl: `${API_CONFIG.TMDB.BASE_URL}/${id}/videos?`,
         })
       ),
       Effect.withSpan("getPromoById", { attributes: { id } }),

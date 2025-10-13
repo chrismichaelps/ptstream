@@ -3,14 +3,15 @@ import qs from "qs";
 
 import HttpClientService from "../http-client/HttpClientService";
 import { SerieFilter } from "src/types";
+import { API_CONFIG, API_ENDPOINTS } from "../../constants";
 
 export default {
   all: (props: SerieFilter & { with_genres?: number }) => {
     const query: SerieFilter = {
-      sort_by: 'popularity.desc',
-      api_key: 'a0a7e40dc8162ed7e37aa2fc97db5654',
-      with_original_language: 'en',
-      include_adult: false,
+      sort_by: API_CONFIG.QUERY_PARAMS.DEFAULT_SORT,
+      api_key: API_CONFIG.TMDB.API_KEY,
+      with_original_language: API_CONFIG.QUERY_PARAMS.ORIGINAL_LANGUAGE,
+      include_adult: API_CONFIG.QUERY_PARAMS.INCLUDE_ADULT,
       with_type: 4,
       without_keywords: '210024,9755,272877,197251,6513,287501,290799',
       ...props,
@@ -24,7 +25,7 @@ export default {
     }).pipe(
       Effect.provide(
         HttpClientService.Live({
-          baseUrl: "https://api.themoviedb.org/3/discover/tv?",
+          baseUrl: API_ENDPOINTS.SERIES.DISCOVER,
         })
       ),
       Effect.runPromise
@@ -33,7 +34,7 @@ export default {
 
   getSeasonById: (id: number) => {
     const query = {
-      api_key: 'a0a7e40dc8162ed7e37aa2fc97db5654',
+      api_key: API_CONFIG.TMDB.API_KEY,
     };
 
     const queryString = qs.stringify(query);
@@ -44,7 +45,7 @@ export default {
     }).pipe(
       Effect.provide(
         HttpClientService.Live({
-          baseUrl: `https://api.themoviedb.org/3/tv/${id}?`,
+          baseUrl: `${API_CONFIG.TMDB.BASE_URL}/tv/${id}?`,
         })
       ),
       Effect.withSpan("getSeasonById", { attributes: { id } }),
@@ -57,7 +58,7 @@ export default {
     seasonId: number,
   }) => {
     const query = {
-      api_key: '7ac6de5ca5060c7504e05da7b218a30c',
+      api_key: API_CONFIG.TMDB.API_KEY_ALT,
       append_to_response: 'keywords,external_ids'
     };
 
@@ -69,7 +70,7 @@ export default {
     }).pipe(
       Effect.provide(
         HttpClientService.Live({
-          baseUrl: `https://api.themoviedb.org/3/tv/${serieId}/season/${seasonId}?`,
+          baseUrl: `${API_CONFIG.TMDB.BASE_URL}/tv/${serieId}/season/${seasonId}?`,
         })
       ),
       Effect.withSpan("getChapterBySeasonId", { attributes: { serieId, seasonId } }),

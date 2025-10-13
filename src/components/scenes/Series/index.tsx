@@ -3,6 +3,7 @@ import { useDisclosure } from "@nextui-org/react";
 import { unionBy, set, size } from "lodash";
 import { useTranslation } from "react-i18next";
 import { useSelectedGenre } from "../../../../packages/store";
+import { THRESHOLDS } from "../../../../packages/constants";
 
 import { SerieResult, SerieReturnType, UniqueSerie } from "../../../types";
 import useSeries from "../../../hooks/useSeries";
@@ -40,7 +41,7 @@ export default function SerieScene() {
 
   const selectedSeasonState = useSeasonSelected();
 
-  const showScrollToTop = size(series) >= 100;
+  const showScrollToTop = size(series) >= THRESHOLDS.SCROLL_TO_TOP;
 
   const handleCloseModal = () => {
     selectedSeasonState.clear();

@@ -2,13 +2,14 @@ import { Effect } from "effect";
 import qs from "qs";
 
 import HttpClientService from "../http-client/HttpClientService";
+import { API_CONFIG, API_ENDPOINTS } from "../../constants";
 
 export default {
   search: (params: { q: string }) => {
     const query = {
       query: params.q,
-      api_key: "a0a7e40dc8162ed7e37aa2fc97db5654",
-      include_adult: false,
+      api_key: API_CONFIG.TMDB.API_KEY,
+      include_adult: API_CONFIG.QUERY_PARAMS.INCLUDE_ADULT,
     };
 
     const queryString = qs.stringify(query);
@@ -19,7 +20,7 @@ export default {
     }).pipe(
       Effect.provide(
         HttpClientService.Live({
-          baseUrl: "https://api.themoviedb.org/3/search/multi?",
+          baseUrl: API_ENDPOINTS.SEARCH.MULTI,
         })
       ),
       Effect.runPromise

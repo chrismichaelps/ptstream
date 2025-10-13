@@ -1,6 +1,7 @@
 import { ElectronBlocker } from '@cliqz/adblocker-electron';
 import { app, BrowserWindow, session } from 'electron';
 import path from 'path';
+import { UI_DIMENSIONS } from "../packages/constants";
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) {
@@ -10,8 +11,8 @@ if (require('electron-squirrel-startup')) {
 const createWindow = () => {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
-    width: 900,
-    height: 720,
+    width: UI_DIMENSIONS.WINDOW.WIDTH,
+    height: UI_DIMENSIONS.WINDOW.HEIGHT,
     resizable: false,
     autoHideMenuBar: true,
     center: true,

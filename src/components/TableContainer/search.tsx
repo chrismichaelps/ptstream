@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { get, map, size, truncate } from "lodash";
 
 import { SerieResult, UniqueSerie } from "../../types";
+import { UI_DIMENSIONS } from "../../../packages/constants";
 import { SearchIcon } from "../Icons/SearchIcon";
 import TvIcon from "../Icons/TvIcon";
 import MovieIcon from "../Icons/MovieIcon";
@@ -50,8 +51,8 @@ export const TableContainer = ({
               className="object-cover rounded-lg"
               src={`https://image.tmdb.org/t/p/w185${get(row, "poster_path")}`}
               fallbackSrc="https://via.placeholder.com/300x300"
-              height={120}
-              width={80}
+              height={UI_DIMENSIONS.IMAGES.POSTER.HEIGHT}
+              width={UI_DIMENSIONS.IMAGES.POSTER.WIDTH}
             />
             {/* Media Type Label Below Image */}
             <div className="mt-2 text-center">

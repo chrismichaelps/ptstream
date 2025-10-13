@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { GithubIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Effect, pipe } from "effect";
+import { UI_DIMENSIONS } from "../../../packages/constants";
 
 export function Footer() {
   const { t } = useTranslation();
@@ -39,7 +40,7 @@ export function Footer() {
           className="text-gray-700 transition-colors hover:text-gray-900 group"
         >
           <GithubIcon
-            size={24}
+            size={UI_DIMENSIONS.ICONS.MEDIUM}
             className="transition-transform duration-300 ease-in-out transform group-hover:rotate-12 group-hover:scale-110"
           />
         </a>

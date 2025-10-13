@@ -12,6 +12,7 @@ import { useTranslation } from "react-i18next";
 import { Settings } from "lucide-react";
 
 import i18n from "../../localization/i18n";
+import { UI_DIMENSIONS } from "../../../packages/constants";
 
 export default function Setting() {
   const { t } = useTranslation();
@@ -42,7 +43,7 @@ export default function Setting() {
           className="w-10 h-10 rounded-lg transition-all duration-300 group hover:bg-default-100 dark:hover:bg-default-50"
         >
           <Settings
-            size={20}
+            size={UI_DIMENSIONS.ICONS.SMALL}
             className="transition-transform duration-300 group-hover:rotate-[360deg] text-default-600"
           />
         </Button>

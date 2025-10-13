@@ -6,6 +6,7 @@ import { Effect } from "effect";
 import { useEffectSync } from "../../../contexts/EffectContext";
 import { StorageServiceLive } from "../../../../packages/services";
 import { useSelectedGenre } from "../../../../packages/store";
+import { THRESHOLDS } from "../../../../packages/constants";
 
 import { MyFavoritesTableContainer } from "../../TableContainer";
 import { ModalContainer } from "../../ModalContainer";
@@ -86,7 +87,7 @@ export default function MyFavoriteScene() {
         )
       : transformedItems;
 
-  const showScrollToTop = size(myFavorites) >= 100;
+  const showScrollToTop = size(myFavorites) >= THRESHOLDS.SCROLL_TO_TOP;
 
   const handleOpenModal = (recordSelected: any) => {
     setRecord(recordSelected);

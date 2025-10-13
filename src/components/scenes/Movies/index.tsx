@@ -3,6 +3,7 @@ import { useDisclosure } from "@nextui-org/react";
 import { set, size, unionBy } from "lodash";
 import { useTranslation } from "react-i18next";
 import { useSelectedGenre } from "../../../../packages/store";
+import { THRESHOLDS } from "../../../../packages/constants";
 
 import { MovieResult, MovieReturnType, UniqueMovie } from "../../../types";
 import useMovies from "../../../hooks/useMovies";
@@ -37,7 +38,7 @@ export default function MovieScene() {
 
   const { isOpen, onOpen, onClose } = useDisclosure();
 
-  const showScrollToTop = size(movies) >= 100;
+  const showScrollToTop = size(movies) >= THRESHOLDS.SCROLL_TO_TOP;
 
   const handleOpenModal = (recordSelected: UniqueMovie) => {
     setRecord(recordSelected);

@@ -9,6 +9,7 @@ import {
 import { map, sortBy } from "lodash";
 import { useTranslation } from "react-i18next";
 import { useCurrentScene } from "../../../packages/store";
+import { UI_DIMENSIONS } from "../../../packages/constants";
 
 import { VerticalDotsIcon } from "../Icons/VerticalDotsIcon";
 import { moviesGenres, tvSeriesGenres } from "../../constants";
@@ -54,8 +55,8 @@ const GenreSelector: React.FC<GenreSelectorProps> = React.memo(
               style={{
                 padding: "4px",
                 minWidth: "auto",
-                width: "32px",
-                height: "32px",
+                width: `${UI_DIMENSIONS.BUTTONS.ICON_SIZE}px`,
+                height: `${UI_DIMENSIONS.BUTTONS.ICON_SIZE}px`,
               }}
             >
               <VerticalDotsIcon />

@@ -3,16 +3,17 @@ import qs from "qs";
 
 import HttpClientService from "../http-client/HttpClientService";
 import { MovieFilter } from "src/types";
+import { API_CONFIG, API_ENDPOINTS } from "../../constants";
 
 export default {
   all: (props: MovieFilter & { with_genres?: number }) => {
     const query: MovieFilter = {
-      sort_by: "popularity.desc",
-      api_key: "a0a7e40dc8162ed7e37aa2fc97db5654",
-      include_adult: false,
-      include_video: true,
-      without_keywords: "478,210024",
-      with_original_language: "en",
+      sort_by: API_CONFIG.QUERY_PARAMS.DEFAULT_SORT,
+      api_key: API_CONFIG.TMDB.API_KEY,
+      include_adult: API_CONFIG.QUERY_PARAMS.INCLUDE_ADULT,
+      include_video: API_CONFIG.QUERY_PARAMS.INCLUDE_VIDEO,
+      without_keywords: API_CONFIG.QUERY_PARAMS.WITHOUT_KEYWORDS,
+      with_original_language: API_CONFIG.QUERY_PARAMS.ORIGINAL_LANGUAGE,
       ...props,
     };
 
@@ -24,7 +25,7 @@ export default {
     }).pipe(
       Effect.provide(
         HttpClientService.Live({
-          baseUrl: "https://api.themoviedb.org/3/discover/movie?",
+          baseUrl: API_ENDPOINTS.MOVIES.DISCOVER,
         })
       ),
       Effect.runPromise

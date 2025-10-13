@@ -3,6 +3,7 @@ import { Spinner, Image } from "@nextui-org/react";
 import { get, map, size, truncate } from "lodash";
 
 import { SerieResult, UniqueSerie } from "../../types";
+import { UI_DIMENSIONS } from "../../../packages/constants";
 
 type TableContainerProps = {
   rows: SerieResult;
@@ -29,8 +30,8 @@ export const TableContainer = ({
             className="object-cover rounded-lg"
             src={`https://image.tmdb.org/t/p/w185${get(row, "poster_path")}`}
             fallbackSrc="https://via.placeholder.com/300x300"
-            height={120}
-            width={80}
+            height={UI_DIMENSIONS.IMAGES.POSTER.HEIGHT}
+            width={UI_DIMENSIONS.IMAGES.POSTER.WIDTH}
           />
           <div className="flex-1 ml-4">
             <p className="font-semibold text-gray-800 text-md">

@@ -2,6 +2,7 @@ import { Fragment } from "react";
 import { Chip, useDisclosure } from "@nextui-org/react";
 import { chain, includes, map, size } from "lodash";
 import { useTranslation } from "react-i18next";
+import { THRESHOLDS } from "../../../../packages/constants";
 
 import { SearchTableContainer } from "../../TableContainer";
 import { ModalContainer } from "../../ModalContainer";
@@ -93,7 +94,7 @@ const SerieScene = () => {
   const page = useCurrentPage();
   const dispatch = useStoreDispatch();
 
-  const showScrollToTop = size(records) >= 100;
+  const showScrollToTop = size(records) >= THRESHOLDS.SCROLL_TO_TOP;
 
   const filterOutMediaTypes = (mediaTypes: string[], data: any) =>
     chain(data)
