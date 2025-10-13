@@ -1,4 +1,4 @@
-import { Schema } from "@effect/schema";
+import { Schema } from "effect";
 import { ComponentType, SVGProps } from "react";
 
 export type IconSvgProps = SVGProps<SVGSVGElement> & {
@@ -13,7 +13,6 @@ export type SceneProps = {
 export type Scene = "series" | "movies";
 
 export type MediaType = "movie" | "tv";
-
 
 const MovieFilterSchema = Schema.Struct({
   page: Schema.Number,
