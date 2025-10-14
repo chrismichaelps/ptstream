@@ -10,7 +10,7 @@ Project in progress ...
 
 ## Prerequisites
 
-- [x] `Node.js >= 18.x`
+- [x] `Node.js >= 23.3.0`
 - [x] `Yarn >= 1.x`
 
 # 📚 Documentation
@@ -62,4 +62,4 @@ _*Chris M. Perez*_
 
 ---
 
-Copyright ©2024 [ptstream](https://github.com/chrismichaelps/ptstream).
+Copyright ©2025 [ptstream](https://github.com/chrismichaelps/ptstream).
