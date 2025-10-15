@@ -65,3 +65,5 @@ export const ModalContainer = forwardRef<ModalContainerRef, Props>(
 );
 
 ModalContainer.displayName = "ModalContainer";
+
+export default ModalContainer;

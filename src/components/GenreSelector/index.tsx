@@ -1,4 +1,9 @@
-import React, { useCallback, useMemo } from "react";
+import React, {
+  useCallback,
+  useMemo,
+  useImperativeHandle,
+  forwardRef,
+} from "react";
 import {
   Dropdown,
   DropdownItem,
@@ -14,13 +19,20 @@ import { UI_DIMENSIONS } from "../../../packages/constants";
 import { VerticalDotsIcon } from "../Icons/VerticalDotsIcon";
 import { moviesGenres, tvSeriesGenres } from "../../constants";
 
+export interface GenreSelectorRef {
+  selectGenre: (genre: number | null) => void;
+  clearSelection: () => void;
+  getSelectedGenre: () => number | null;
+  getAvailableGenres: () => Array<[string, string]>;
+}
+
 type GenreSelectorProps = {
   selectedGenre: number | null;
   onGenreChange: (genre: number | null) => void;
 };
 
-const GenreSelector: React.FC<GenreSelectorProps> = React.memo(
-  ({ selectedGenre, onGenreChange }) => {
+const GenreSelector = forwardRef<GenreSelectorRef, GenreSelectorProps>(
+  ({ selectedGenre, onGenreChange }, ref) => {
     const { t } = useTranslation();
     const currentScene = useCurrentScene();
 
@@ -42,6 +54,31 @@ const GenreSelector: React.FC<GenreSelectorProps> = React.memo(
         onGenreChange(genre);
       },
       [onGenreChange]
+    );
+
+    const selectGenre = useCallback(
+      (genre: number | null) => {
+        onGenreChange(genre);
+      },
+      [onGenreChange]
+    );
+
+    const clearSelection = useCallback(() => {
+      onGenreChange(null);
+    }, [onGenreChange]);
+
+    const getSelectedGenre = useCallback(() => selectedGenre, [selectedGenre]);
+    const getAvailableGenres = useCallback(() => getGenres, [getGenres]);
+
+    useImperativeHandle(
+      ref,
+      () => ({
+        selectGenre,
+        clearSelection,
+        getSelectedGenre,
+        getAvailableGenres,
+      }),
+      [selectGenre, clearSelection, getSelectedGenre, getAvailableGenres]
     );
 
     const reorderedGenres = getGenres;
@@ -83,5 +120,7 @@ const GenreSelector: React.FC<GenreSelectorProps> = React.memo(
     );
   }
 );
+
+GenreSelector.displayName = "GenreSelector";
 
 export default GenreSelector;

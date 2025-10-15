@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useImperativeHandle, forwardRef } from "react";
 import { Tabs, Tab } from "@nextui-org/react";
 import { useNavigate } from "react-router-dom";
 import { House, Search, Heart } from "lucide-react";
@@ -13,6 +13,13 @@ import {
 } from "../../../packages/store";
 
 type Key = "home" | "search" | "myFavorites";
+
+export interface NavBarRef {
+  navigateTo: (key: Key) => void;
+  getCurrentTab: () => Key;
+  resetSearch: () => void;
+  clearSearch: () => void;
+}
 
 const NAVIGATION_MAP: Record<Key, string> = {
   home: "/",
@@ -30,7 +37,7 @@ const translateKeys = (t: TFunction<"translation", undefined>, key: Key) => {
   return t(translationKeys[key]);
 };
 
-export default function NavBar() {
+const NavBar = forwardRef<NavBarRef, {}>(({}, ref) => {
   const navigate = useNavigate();
   const { t } = useTranslation();
 
@@ -58,6 +65,32 @@ export default function NavBar() {
       ),
       Effect.runSync
     );
+
+  const navigateTo = (key: Key) => {
+    setSelected(key);
+    navigate(NAVIGATION_MAP[key]);
+  };
+
+  const getCurrentTab = () => selected;
+
+  const resetSearch = () => {
+    dispatch(resetSearchState());
+  };
+
+  const clearSearch = () => {
+    dispatch(clearSearchQuery());
+  };
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      navigateTo,
+      getCurrentTab,
+      resetSearch,
+      clearSearch,
+    }),
+    [selected, navigate, dispatch]
+  );
 
   return (
     <div className="flex flex-col w-full">
@@ -87,4 +120,8 @@ export default function NavBar() {
       </Tabs>
     </div>
   );
-}
+});
+
+NavBar.displayName = "NavBar";
+
+export default NavBar;
