@@ -1,4 +1,4 @@
-import { Fragment } from "react";
+import { Fragment, useImperativeHandle, forwardRef } from "react";
 import { Chip, useDisclosure } from "@nextui-org/react";
 import { chain, includes, map, size } from "lodash";
 import { useTranslation } from "react-i18next";
@@ -83,7 +83,19 @@ const ModalContent = ({
   return scenes[mediaType] || null;
 };
 
-const SerieScene = () => {
+export interface SearchSceneRef {
+  performSearch: (query: string) => void;
+  clearSearch: () => void;
+  openModal: (record: any) => void;
+  closeModal: () => void;
+  getSearchResults: () => any[];
+  getCurrentPage: () => number;
+  getTotalPages: () => number;
+  isModalOpen: () => boolean;
+  isLoading: () => boolean;
+}
+
+const SearchScene = forwardRef<SearchSceneRef, {}>(({}, ref) => {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const { t } = useTranslation();
 
@@ -121,6 +133,48 @@ const SerieScene = () => {
 
   const handleSelectTerm = (term: string) => dispatch(setSearchQuery(term));
 
+  // Imperative methods
+  const performSearch = (query: string) => {
+    dispatch(setSearchQuery(query));
+  };
+
+  const clearSearch = () => {
+    dispatch(setSearchRecords([]));
+    dispatch(setCurrentPage(1));
+    dispatch(setTotalRecords(0));
+  };
+
+  const openModal = (recordSelected: any) => {
+    dispatch(setSelectedRecord(recordSelected));
+    onOpen();
+  };
+
+  const closeModal = () => {
+    onClose();
+  };
+
+  const getSearchResults = () => records;
+  const getCurrentPage = () => page;
+  const getTotalPages = () => totalRecords;
+  const isModalOpen = () => isOpen;
+  const isLoadingState = () => isLoading;
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      performSearch,
+      clearSearch,
+      openModal,
+      closeModal,
+      getSearchResults,
+      getCurrentPage,
+      getTotalPages,
+      isModalOpen,
+      isLoading: isLoadingState,
+    }),
+    [records, page, totalRecords, isOpen, isLoading, dispatch]
+  );
+
   return (
     <Fragment>
       <SeoContainer title={`${t("Navigation_Search")}`} />
@@ -154,6 +208,7 @@ const SerieScene = () => {
       ) : null}
     </Fragment>
   );
-};
+});
 
-export default SerieScene;
+SearchScene.displayName = "SearchScene";
+export default SearchScene;

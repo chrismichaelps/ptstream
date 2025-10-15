@@ -1,4 +1,12 @@
-import { useState, useCallback, Fragment, useEffect, useRef } from "react";
+import {
+  useState,
+  useCallback,
+  Fragment,
+  useEffect,
+  useRef,
+  useImperativeHandle,
+  forwardRef,
+} from "react";
 import { useDisclosure } from "@nextui-org/react";
 import { unionBy, set, size } from "lodash";
 import { useTranslation } from "react-i18next";
@@ -25,7 +33,20 @@ const EmptyState = () => {
   );
 };
 
-export default function SerieScene() {
+export interface SeriesSceneRef {
+  loadSeries: (genre?: number) => void;
+  clearSeries: () => void;
+  openModal: (record: UniqueSerie) => void;
+  closeModal: () => void;
+  getSeries: () => SerieResult;
+  getCurrentPage: () => number;
+  getTotalPages: () => number | undefined;
+  isModalOpen: () => boolean;
+  isLoading: () => boolean;
+  refreshSeries: () => void;
+}
+
+const SeriesScene = forwardRef<SeriesSceneRef, {}>(({}, ref) => {
   const [series, setSeries] = useState<SerieResult>([]);
   const [totalRecords, setTotalRecords] = useState<number>();
   const [page, setPage] = useState<number>(1);
@@ -98,6 +119,56 @@ export default function SerieScene() {
   const isLoading = status === "pending";
   const emptyState = !isLoading && size(series) === 0;
 
+  // Imperative methods
+  const loadSeries = (genre?: number) => {
+    if (genre !== undefined) {
+      // This would need to be handled by the parent component
+      console.log("Load series with genre:", genre);
+    } else {
+      makeRequest();
+    }
+  };
+
+  const clearSeries = () => {
+    reset();
+  };
+
+  const openModal = (recordSelected: UniqueSerie) => {
+    setRecord(recordSelected);
+    onOpen();
+  };
+
+  const closeModal = () => {
+    selectedSeasonState.clear();
+    onClose();
+  };
+
+  const getSeries = () => series;
+  const getCurrentPage = () => page;
+  const getTotalPages = () => totalRecords;
+  const isModalOpen = () => isOpen;
+  const isLoadingState = () => isLoading;
+  const refreshSeries = () => {
+    makeRequest();
+  };
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      loadSeries,
+      clearSeries,
+      openModal,
+      closeModal,
+      getSeries,
+      getCurrentPage,
+      getTotalPages,
+      isModalOpen,
+      isLoading: isLoadingState,
+      refreshSeries,
+    }),
+    [series, page, totalRecords, isOpen, isLoading, makeRequest, reset]
+  );
+
   return (
     <Fragment>
       <SeoContainer title={`${t("Navigation_Home")} - ${t("Series_Title")}`} />
@@ -123,4 +194,7 @@ export default function SerieScene() {
       />
     </Fragment>
   );
-}
+});
+
+SeriesScene.displayName = "SeriesScene";
+export default SeriesScene;

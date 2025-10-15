@@ -1,4 +1,10 @@
-import { useState, Fragment, useEffect } from "react";
+import {
+  useState,
+  Fragment,
+  useEffect,
+  useImperativeHandle,
+  forwardRef,
+} from "react";
 import { Chip, useDisclosure } from "@nextui-org/react";
 import { filter, get, includes, map, size } from "lodash";
 import { useTranslation } from "react-i18next";
@@ -60,7 +66,18 @@ const FilterEmptyState = () => {
 
 const transformMyFavorites = (data: any) => map(data, (item) => item);
 
-export default function MyFavoriteScene() {
+export interface MyFavoritesSceneRef {
+  refreshFavorites: () => void;
+  openModal: (record: any) => void;
+  closeModal: () => void;
+  getFavorites: () => any[];
+  getFilteredFavorites: () => any[];
+  isModalOpen: () => boolean;
+  isLoading: () => boolean;
+  clearFavorites: () => void;
+}
+
+const MyFavoritesScene = forwardRef<MyFavoritesSceneRef, {}>(({}, ref) => {
   const [record, setRecord] = useState<any>();
   const [isLoading, setIsLoading] = useState(true);
   const { isOpen, onOpen, onClose } = useDisclosure();
@@ -127,6 +144,40 @@ export default function MyFavoriteScene() {
     return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
 
+  // Imperative methods
+  const openModal = (recordSelected: any) => {
+    setRecord(recordSelected);
+    onOpen();
+  };
+
+  const closeModal = () => {
+    onClose();
+  };
+
+  const getFavorites = () => transformedItems;
+  const getFilteredFavorites = () => myFavorites;
+  const isModalOpen = () => isOpen;
+  const isLoadingState = () => isLoading;
+  const clearFavorites = () => {
+    // This would need to be handled by the parent component
+    console.log("Clear all favorites requested");
+  };
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      refreshFavorites,
+      openModal,
+      closeModal,
+      getFavorites,
+      getFilteredFavorites,
+      isModalOpen,
+      isLoading: isLoadingState,
+      clearFavorites,
+    }),
+    [transformedItems, myFavorites, isOpen, isLoading, refreshFavorites]
+  );
+
   return (
     <Fragment>
       <SeoContainer title={`${t("Navigation_MyFavorites")}`} />
@@ -134,6 +185,9 @@ export default function MyFavoriteScene() {
       <MyFavoritesTableContainer
         isLoading={isLoading}
         rows={myFavorites}
+        totalRecords={myFavorites.length}
+        page={1}
+        watchPage={() => {}}
         handleOpenModal={handleOpenModal}
         emptyContentLabel={
           currentGenre > 0 ? <FilterEmptyState /> : <DefaultState />
@@ -156,4 +210,7 @@ export default function MyFavoriteScene() {
       ) : null}
     </Fragment>
   );
-}
+});
+
+MyFavoritesScene.displayName = "MyFavoritesScene";
+export default MyFavoritesScene;

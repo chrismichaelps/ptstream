@@ -1,4 +1,12 @@
-import { useState, useCallback, Fragment, useRef, useEffect } from "react";
+import {
+  useState,
+  useCallback,
+  Fragment,
+  useRef,
+  useEffect,
+  useImperativeHandle,
+  forwardRef,
+} from "react";
 import { useDisclosure } from "@nextui-org/react";
 import { set, size, unionBy } from "lodash";
 import { useTranslation } from "react-i18next";
@@ -24,7 +32,20 @@ const EmptyState = () => {
   );
 };
 
-export default function MovieScene() {
+export interface MoviesSceneRef {
+  loadMovies: (genre?: number) => void;
+  clearMovies: () => void;
+  openModal: (record: UniqueMovie) => void;
+  closeModal: () => void;
+  getMovies: () => MovieResult;
+  getCurrentPage: () => number;
+  getTotalPages: () => number | undefined;
+  isModalOpen: () => boolean;
+  isLoading: () => boolean;
+  refreshMovies: () => void;
+}
+
+const MoviesScene = forwardRef<MoviesSceneRef, {}>(({}, ref) => {
   const [movies, setMovies] = useState<MovieResult>([]);
   const [totalRecords, setTotalRecords] = useState<number>();
   const [page, setPage] = useState<number>(1);
@@ -91,6 +112,55 @@ export default function MovieScene() {
   const isLoading = status === "pending";
   const emptyState = !isLoading && size(movies) === 0;
 
+  // Imperative methods
+  const loadMovies = (genre?: number) => {
+    if (genre !== undefined) {
+      // This would need to be handled by the parent component
+      console.log("Load movies with genre:", genre);
+    } else {
+      makeRequest();
+    }
+  };
+
+  const clearMovies = () => {
+    reset();
+  };
+
+  const openModal = (recordSelected: UniqueMovie) => {
+    setRecord(recordSelected);
+    onOpen();
+  };
+
+  const closeModal = () => {
+    onClose();
+  };
+
+  const getMovies = () => movies;
+  const getCurrentPage = () => page;
+  const getTotalPages = () => totalRecords;
+  const isModalOpen = () => isOpen;
+  const isLoadingState = () => isLoading;
+  const refreshMovies = () => {
+    makeRequest();
+  };
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      loadMovies,
+      clearMovies,
+      openModal,
+      closeModal,
+      getMovies,
+      getCurrentPage,
+      getTotalPages,
+      isModalOpen,
+      isLoading: isLoadingState,
+      refreshMovies,
+    }),
+    [movies, page, totalRecords, isOpen, isLoading, makeRequest, reset]
+  );
+
   return (
     <Fragment>
       <SeoContainer title={`${t("Navigation_Home")} - ${t("Movies_Title")}`} />
@@ -116,4 +186,7 @@ export default function MovieScene() {
       />
     </Fragment>
   );
-}
+});
+
+MoviesScene.displayName = "MoviesScene";
+export default MoviesScene;
