@@ -1,5 +1,7 @@
+import { forwardRef, useImperativeHandle } from "react";
 import { MovieResult, UniqueMovie } from "../../types";
 import { MovieTableContainer } from "./BaseTableContainer";
+import { BaseTableContainerRef } from "./BaseTableContainer";
 
 type TableContainerProps = {
   rows: MovieResult;
@@ -11,6 +13,11 @@ type TableContainerProps = {
   isLoading?: boolean;
 };
 
-export const TableContainer = (props: TableContainerProps) => {
-  return <MovieTableContainer {...props} />;
-};
+export const TableContainer = forwardRef<
+  BaseTableContainerRef,
+  TableContainerProps
+>((props, ref) => {
+  return <MovieTableContainer ref={ref} {...props} />;
+});
+
+TableContainer.displayName = "MovieTableContainer";

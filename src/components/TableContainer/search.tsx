@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useImperativeHandle, forwardRef } from "react";
 import { Spinner, Image, Input, Chip } from "@nextui-org/react";
 import { useTranslation } from "react-i18next";
 import { get, map, size, truncate } from "lodash";
@@ -15,6 +15,16 @@ import {
   clearSearchQuery,
 } from "../../../packages/store";
 
+export interface SearchTableContainerRef {
+  clearSearch: () => void;
+  setSearchQuery: (query: string) => void;
+  getSearchQuery: () => string;
+  getResults: () => SerieResult;
+  getResultCount: () => number;
+  scrollToTop: () => void;
+  refreshResults: () => void;
+}
+
 type TableContainerProps = {
   rows: SerieResult;
   totalRecords: number;
@@ -24,12 +34,10 @@ type TableContainerProps = {
   isLoading?: boolean;
 };
 
-export const TableContainer = ({
-  rows,
-  handleOpenModal,
-  emptyContentLabel,
-  isLoading,
-}: TableContainerProps) => {
+export const TableContainer = forwardRef<
+  SearchTableContainerRef,
+  TableContainerProps
+>(({ rows, handleOpenModal, emptyContentLabel, isLoading }, ref) => {
   const { t } = useTranslation();
 
   const dispatch = useStoreDispatch();
@@ -135,6 +143,40 @@ export const TableContainer = ({
 
   const mainClass = size(rows) > 0 ? "mt-4" : "mt-20";
 
+  // Imperative methods
+  const clearSearch = () => {
+    dispatch(clearSearchQuery());
+  };
+
+  const setSearchQueryValue = (query: string) => {
+    dispatch(setSearchQuery(query));
+  };
+
+  const getSearchQuery = () => term;
+  const getResults = () => rows;
+  const getResultCount = () => size(rows);
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+  const refreshResults = () => {
+    // This would need to be handled by the parent component
+    console.log("Refresh search results requested");
+  };
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      clearSearch,
+      setSearchQuery: setSearchQueryValue,
+      getSearchQuery,
+      getResults,
+      getResultCount,
+      scrollToTop,
+      refreshResults,
+    }),
+    [term, rows, dispatch]
+  );
+
   return (
     <div>
       {topContent}
@@ -144,4 +186,6 @@ export const TableContainer = ({
       </div>
     </div>
   );
-};
+});
+
+TableContainer.displayName = "SearchTableContainer";

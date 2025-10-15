@@ -1,4 +1,11 @@
-import { useCallback, useEffect, memo, useMemo } from "react";
+import {
+  useCallback,
+  useEffect,
+  memo,
+  useMemo,
+  useImperativeHandle,
+  forwardRef,
+} from "react";
 import { Spinner, Image } from "@nextui-org/react";
 import { map, size, throttle, truncate } from "lodash";
 
@@ -101,21 +108,39 @@ const BaseMediaCard = memo<{
 
 BaseMediaCard.displayName = "BaseMediaCard";
 
+export interface BaseTableContainerRef {
+  scrollToTop: () => void;
+  scrollToBottom: () => void;
+  getCurrentPage: () => number;
+  getTotalPages: () => number;
+  getItemCount: () => number;
+  hasMorePages: () => boolean;
+  loadNextPage: () => void;
+  refreshData: () => void;
+  getVisibleItems: () => UniversalMediaItem[];
+}
+
 // Main base table container component
-export const BaseTableContainer = memo<BaseTableContainerProps>(
-  ({
-    rows,
-    totalRecords,
-    page,
-    handleOpenModal,
-    watchPage,
-    emptyContentLabel,
-    isLoading,
-    mediaType = "movie",
-    showRatings = true,
-    showDates = true,
-    customCardRenderer,
-  }) => {
+export const BaseTableContainer = forwardRef<
+  BaseTableContainerRef,
+  BaseTableContainerProps
+>(
+  (
+    {
+      rows,
+      totalRecords,
+      page,
+      handleOpenModal,
+      watchPage,
+      emptyContentLabel,
+      isLoading,
+      mediaType = "movie",
+      showRatings = true,
+      showDates = true,
+      customCardRenderer,
+    },
+    ref
+  ) => {
     const hasMore = page < totalRecords;
 
     // Memoized render function
@@ -185,6 +210,49 @@ export const BaseTableContainer = memo<BaseTableContainerProps>(
       return `${baseClasses} ${responsiveClasses}`;
     }, []);
 
+    // Imperative methods
+    const scrollToTop = () => {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    };
+
+    const scrollToBottom = () => {
+      window.scrollTo({
+        top: document.documentElement.scrollHeight,
+        behavior: "smooth",
+      });
+    };
+
+    const getCurrentPage = () => page;
+    const getTotalPages = () => totalRecords;
+    const getItemCount = () => size(rows);
+    const hasMorePages = () => hasMore;
+    const loadNextPage = () => {
+      if (hasMore && !isLoading) {
+        watchPage(page + 1);
+      }
+    };
+    const refreshData = () => {
+      // This would need to be handled by the parent component
+      console.log("Refresh data requested");
+    };
+    const getVisibleItems = () => [...rows];
+
+    useImperativeHandle(
+      ref,
+      () => ({
+        scrollToTop,
+        scrollToBottom,
+        getCurrentPage,
+        getTotalPages,
+        getItemCount,
+        hasMorePages,
+        loadNextPage,
+        refreshData,
+        getVisibleItems,
+      }),
+      [page, totalRecords, hasMore, isLoading, rows, watchPage]
+    );
+
     return (
       <div>
         {isLoading ? (
@@ -202,25 +270,33 @@ export const BaseTableContainer = memo<BaseTableContainerProps>(
 BaseTableContainer.displayName = "BaseTableContainer";
 
 // Type-specific table containers for backward compatibility
-export const MovieTableContainer = memo<{
-  rows: readonly UniqueMovie[];
-  totalRecords: number;
-  page: number;
-  handleOpenModal: (recordSelected: UniqueMovie) => void;
-  watchPage: (page: number) => void;
-  emptyContentLabel: JSX.Element;
-  isLoading?: boolean;
-}>((props) => <BaseTableContainer {...props} mediaType="movie" />);
+export const MovieTableContainer = forwardRef<
+  BaseTableContainerRef,
+  {
+    rows: readonly UniqueMovie[];
+    totalRecords: number;
+    page: number;
+    handleOpenModal: (recordSelected: UniqueMovie) => void;
+    watchPage: (page: number) => void;
+    emptyContentLabel: JSX.Element;
+    isLoading?: boolean;
+  }
+>((props, ref) => (
+  <BaseTableContainer ref={ref} {...props} mediaType="movie" />
+));
 
-export const SerieTableContainer = memo<{
-  rows: readonly UniqueSerie[];
-  totalRecords: number;
-  page: number;
-  handleOpenModal: (recordSelected: UniqueSerie) => void;
-  watchPage: (page: number) => void;
-  emptyContentLabel: JSX.Element;
-  isLoading?: boolean;
-}>((props) => <BaseTableContainer {...props} mediaType="tv" />);
+export const SerieTableContainer = forwardRef<
+  BaseTableContainerRef,
+  {
+    rows: readonly UniqueSerie[];
+    totalRecords: number;
+    page: number;
+    handleOpenModal: (recordSelected: UniqueSerie) => void;
+    watchPage: (page: number) => void;
+    emptyContentLabel: JSX.Element;
+    isLoading?: boolean;
+  }
+>((props, ref) => <BaseTableContainer ref={ref} {...props} mediaType="tv" />);
 
 MovieTableContainer.displayName = "MovieTableContainer";
 SerieTableContainer.displayName = "SerieTableContainer";

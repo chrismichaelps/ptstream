@@ -1,5 +1,7 @@
+import { forwardRef } from "react";
 import { SerieResult, UniqueSerie } from "../../types";
 import { BaseTableContainer } from "./BaseTableContainer";
+import { BaseTableContainerRef } from "./BaseTableContainer";
 
 type TableContainerProps = {
   rows: SerieResult;
@@ -11,6 +13,11 @@ type TableContainerProps = {
   isLoading?: boolean;
 };
 
-export const TableContainer = (props: TableContainerProps) => {
-  return <BaseTableContainer {...props} mediaType="tv" />;
-};
+export const TableContainer = forwardRef<
+  BaseTableContainerRef,
+  TableContainerProps
+>((props, ref) => {
+  return <BaseTableContainer ref={ref} {...props} mediaType="tv" />;
+});
+
+TableContainer.displayName = "MyFavoritesTableContainer";
