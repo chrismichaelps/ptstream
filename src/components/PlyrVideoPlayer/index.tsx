@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useImperativeHandle, forwardRef, useRef } from "react";
 import Plyr from "plyr-react";
 import { X } from "lucide-react";
 import { map, toLower } from "lodash";
@@ -8,16 +8,30 @@ import { PromoResult } from "../../types";
 
 import "plyr-react/plyr.css";
 
+export interface PlyrVideoPlayerRef {
+  play: () => void;
+  pause: () => void;
+  togglePlay: () => void;
+  setVolume: (volume: number) => void;
+  seek: (time: number) => void;
+  toggleFullscreen: () => void;
+  close: () => void;
+  isPlaying: () => boolean;
+  getCurrentTime: () => number;
+  getDuration: () => number;
+}
+
 type PlyrVideoPlayerProps = {
   promo: PromoResult;
   onClosePlayer: () => void;
 };
 
-export function PlyrVideoPlayer({
-  promo,
-  onClosePlayer,
-}: PlyrVideoPlayerProps) {
+export const PlyrVideoPlayer = forwardRef<
+  PlyrVideoPlayerRef,
+  PlyrVideoPlayerProps
+>(({ promo, onClosePlayer }, ref) => {
   const [isFloating, setIsFloating] = useState(true);
+  const plyrRef = useRef<any>(null);
 
   const sources = pipe(
     Effect.sync(() => promo),
@@ -30,7 +44,7 @@ export function PlyrVideoPlayer({
             provider: toLower(site),
             size: size,
             type: type,
-          } as Plyr.Source)
+          }) as Plyr.Source
       )
     ),
     Effect.runSync
@@ -44,6 +58,27 @@ export function PlyrVideoPlayer({
       }),
       Effect.runSync
     );
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      play: () => plyrRef.current?.play(),
+      pause: () => plyrRef.current?.pause(),
+      togglePlay: () => plyrRef.current?.togglePlay(),
+      setVolume: (volume: number) => {
+        if (plyrRef.current) plyrRef.current.volume = volume;
+      },
+      seek: (time: number) => {
+        if (plyrRef.current) plyrRef.current.currentTime = time;
+      },
+      toggleFullscreen: () => plyrRef.current?.toggleFullscreen(),
+      close: handleClose,
+      isPlaying: () => plyrRef.current?.playing || false,
+      getCurrentTime: () => plyrRef.current?.currentTime || 0,
+      getDuration: () => plyrRef.current?.duration || 0,
+    }),
+    []
+  );
 
   return (
     <div
@@ -63,6 +98,7 @@ export function PlyrVideoPlayer({
         </button>
       )}
       <Plyr
+        ref={plyrRef}
         source={{
           type: "video",
           sources: sources,
@@ -84,6 +120,8 @@ export function PlyrVideoPlayer({
       />
     </div>
   );
-}
+});
+
+PlyrVideoPlayer.displayName = "PlyrVideoPlayer";
 
 export default PlyrVideoPlayer;

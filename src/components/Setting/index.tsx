@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useImperativeHandle, forwardRef } from "react";
 import { Effect, pipe } from "effect";
 import {
   Dropdown,
@@ -14,7 +14,13 @@ import { Settings } from "lucide-react";
 import i18n from "../../localization/i18n";
 import { UI_DIMENSIONS } from "../../../packages/constants";
 
-export default function Setting() {
+export interface SettingRef {
+  changeLanguage: (language: string) => void;
+  getCurrentLanguage: () => string;
+  resetToDefault: () => void;
+}
+
+const Setting = forwardRef<SettingRef, {}>(({}, ref) => {
   const { t } = useTranslation();
   const [selectedLang, setSelectedLang] = useState(i18n.language);
 
@@ -25,6 +31,31 @@ export default function Setting() {
       Effect.tap((newLang) => Effect.sync(() => setSelectedLang(newLang))),
       Effect.runSync
     );
+
+  const changeLanguage = (language: string) => {
+    pipe(
+      Effect.sync(() => language),
+      Effect.tap((newLang) => Effect.sync(() => i18n.changeLanguage(newLang))),
+      Effect.tap((newLang) => Effect.sync(() => setSelectedLang(newLang))),
+      Effect.runSync
+    );
+  };
+
+  const getCurrentLanguage = () => selectedLang;
+
+  const resetToDefault = () => {
+    changeLanguage("en"); // Default to English
+  };
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      changeLanguage,
+      getCurrentLanguage,
+      resetToDefault,
+    }),
+    [selectedLang]
+  );
 
   return (
     <Dropdown
@@ -84,4 +115,8 @@ export default function Setting() {
       </DropdownMenu>
     </Dropdown>
   );
-}
+});
+
+Setting.displayName = "Setting";
+
+export default Setting;

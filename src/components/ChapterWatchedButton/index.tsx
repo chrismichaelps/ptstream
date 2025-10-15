@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useImperativeHandle, forwardRef } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { Tooltip } from "@nextui-org/react";
 import { motion } from "framer-motion";
@@ -9,6 +9,13 @@ import { StorageServiceLive } from "../../../packages/services";
 
 import * as ChaptersWatchedLocalStorage from "../../toolkit/ChaptersWatchedLocalStorage";
 
+export interface ChapterWatchedButtonRef {
+  toggleWatched: () => void;
+  setWatched: (isWatched: boolean) => void;
+  isWatched: () => boolean;
+  getWatchedState: () => boolean;
+}
+
 type ChapterWatchedButtonProps = {
   item: {
     serieId: number;
@@ -17,7 +24,10 @@ type ChapterWatchedButtonProps = {
   };
 };
 
-const ChapterWatchedButton = ({ item }: ChapterWatchedButtonProps) => {
+const ChapterWatchedButton = forwardRef<
+  ChapterWatchedButtonRef,
+  ChapterWatchedButtonProps
+>(({ item }, ref) => {
   const { t } = useTranslation();
   const [isWatched, setIsWatched] = useState(false);
 
@@ -52,6 +62,36 @@ const ChapterWatchedButton = ({ item }: ChapterWatchedButtonProps) => {
     setIsWatched(!isWatched);
   };
 
+  const setWatched = (watched: boolean) => {
+    if (watched !== isWatched) {
+      if (watched) {
+        useEffectSync(
+          ChaptersWatchedLocalStorage.addChapterWatchedItem(item).pipe(
+            Effect.provide(StorageServiceLive)
+          )
+        );
+      } else {
+        useEffectSync(
+          ChaptersWatchedLocalStorage.removeChapterWatchedItem(item).pipe(
+            Effect.provide(StorageServiceLive)
+          )
+        );
+      }
+      setIsWatched(watched);
+    }
+  };
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      toggleWatched,
+      setWatched,
+      isWatched: () => isWatched,
+      getWatchedState: () => isWatched,
+    }),
+    [isWatched, item]
+  );
+
   return (
     <motion.button
       className={`fixed z-50 bottom-4 right-14 p-2 rounded-full ${
@@ -81,6 +121,8 @@ const ChapterWatchedButton = ({ item }: ChapterWatchedButtonProps) => {
       </motion.div>
     </motion.button>
   );
-};
+});
+
+ChapterWatchedButton.displayName = "ChapterWatchedButton";
 
 export default ChapterWatchedButton;
