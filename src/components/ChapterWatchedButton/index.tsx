@@ -1,11 +1,20 @@
-import { useState, useEffect } from "react";
-import { Effect, pipe } from "effect";
+import { useState, useEffect, useImperativeHandle, forwardRef } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { Tooltip } from "@nextui-org/react";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
+import { Effect } from "effect";
+import { useEffectSync } from "../../contexts/EffectContext";
+import { StorageServiceLive } from "../../../packages/services";
 
 import * as ChaptersWatchedLocalStorage from "../../toolkit/ChaptersWatchedLocalStorage";
+
+export interface ChapterWatchedButtonRef {
+  toggleWatched: () => void;
+  setWatched: (isWatched: boolean) => void;
+  isWatched: () => boolean;
+  getWatchedState: () => boolean;
+}
 
 type ChapterWatchedButtonProps = {
   item: {
@@ -15,7 +24,10 @@ type ChapterWatchedButtonProps = {
   };
 };
 
-const ChapterWatchedButton = ({ item }: ChapterWatchedButtonProps) => {
+const ChapterWatchedButton = forwardRef<
+  ChapterWatchedButtonRef,
+  ChapterWatchedButtonProps
+>(({ item }, ref) => {
   const { t } = useTranslation();
   const [isWatched, setIsWatched] = useState(false);
 
@@ -24,28 +36,61 @@ const ChapterWatchedButton = ({ item }: ChapterWatchedButtonProps) => {
 
   // Check if the chapter is already watched when the component mounts
   useEffect(() => {
-    pipe(
-      Effect.sync(() => ChaptersWatchedLocalStorage.wasChapterSeen(item)),
-      Effect.tap((watched) => Effect.sync(() => setIsWatched(watched))),
-      Effect.runSync
+    const watched = useEffectSync(
+      ChaptersWatchedLocalStorage.wasChapterSeen(item).pipe(
+        Effect.provide(StorageServiceLive)
+      )
     );
+    setIsWatched(watched);
   }, [chapterKey]);
 
-  const toggleWatched = () =>
-    pipe(
-      Effect.sync(() => isWatched),
-      Effect.tap((watched) =>
-        Effect.sync(() => {
-          if (watched) {
-            ChaptersWatchedLocalStorage.removeChapterWatchedItem(item);
-          } else {
-            ChaptersWatchedLocalStorage.addChapterWatchedItem(item);
-          }
-        })
-      ),
-      Effect.tap(() => Effect.sync(() => setIsWatched(!isWatched))),
-      Effect.runSync
-    );
+  const toggleWatched = () => {
+    if (isWatched) {
+      useEffectSync(
+        ChaptersWatchedLocalStorage.removeChapterWatchedItem(item).pipe(
+          Effect.provide(StorageServiceLive)
+        )
+      );
+    } else {
+      useEffectSync(
+        ChaptersWatchedLocalStorage.addChapterWatchedItem(item).pipe(
+          Effect.provide(StorageServiceLive)
+        )
+      );
+    }
+
+    setIsWatched(!isWatched);
+  };
+
+  const setWatched = (watched: boolean) => {
+    if (watched !== isWatched) {
+      if (watched) {
+        useEffectSync(
+          ChaptersWatchedLocalStorage.addChapterWatchedItem(item).pipe(
+            Effect.provide(StorageServiceLive)
+          )
+        );
+      } else {
+        useEffectSync(
+          ChaptersWatchedLocalStorage.removeChapterWatchedItem(item).pipe(
+            Effect.provide(StorageServiceLive)
+          )
+        );
+      }
+      setIsWatched(watched);
+    }
+  };
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      toggleWatched,
+      setWatched,
+      isWatched: () => isWatched,
+      getWatchedState: () => isWatched,
+    }),
+    [isWatched, item]
+  );
 
   return (
     <motion.button
@@ -76,6 +121,8 @@ const ChapterWatchedButton = ({ item }: ChapterWatchedButtonProps) => {
       </motion.div>
     </motion.button>
   );
-};
+});
+
+ChapterWatchedButton.displayName = "ChapterWatchedButton";
 
 export default ChapterWatchedButton;

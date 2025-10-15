@@ -1,14 +1,23 @@
-import { useState, Fragment, useEffect } from "react";
+import {
+  useState,
+  Fragment,
+  useEffect,
+  useImperativeHandle,
+  forwardRef,
+} from "react";
 import { Chip, useDisclosure } from "@nextui-org/react";
 import { filter, get, includes, map, size } from "lodash";
-import { useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
+import { Effect } from "effect";
+import { useEffectSync } from "../../../contexts/EffectContext";
+import { StorageServiceLive } from "../../../../packages/services";
+import { useSelectedGenre } from "../../../../packages/store";
+import { THRESHOLDS } from "../../../../packages/constants";
 
 import { MyFavoritesTableContainer } from "../../TableContainer";
 import { ModalContainer } from "../../ModalContainer";
 import { MovieSection, SerieSection } from "../../Section";
 import * as MyFavLocalStorage from "../../../toolkit/MyFavLocalStorage";
-import { RootState } from "../../../redux/store";
 import ScrollToTopButton from "../../../components/ScrollToTopButton";
 import { MediaType } from "../../../types";
 import SeoContainer from "../../../components/SeoContainer";
@@ -57,22 +66,45 @@ const FilterEmptyState = () => {
 
 const transformMyFavorites = (data: any) => map(data, (item) => item);
 
-export default function MyFavoriteScene() {
+export interface MyFavoritesSceneRef {
+  refreshFavorites: () => void;
+  openModal: (record: any) => void;
+  closeModal: () => void;
+  getFavorites: () => any[];
+  getFilteredFavorites: () => any[];
+  isModalOpen: () => boolean;
+  isLoading: () => boolean;
+  clearFavorites: () => void;
+}
+
+const MyFavoritesScene = forwardRef<MyFavoritesSceneRef, {}>(({}, ref) => {
   const [record, setRecord] = useState<any>();
   const [isLoading, setIsLoading] = useState(true);
   const { isOpen, onOpen, onClose } = useDisclosure();
 
   const { t } = useTranslation();
 
-  const currentGenre = useSelector(
-    (state: RootState) => state.genre.selectedGenre
+  const currentGenre = useSelectedGenre();
+
+  // Get items from storage
+  const items = useEffectSync(
+    MyFavLocalStorage.getAllLikedItems().pipe(
+      Effect.provide(StorageServiceLive)
+    )
   );
 
-  const items = MyFavLocalStorage.getAllLikedItems();
+  // Transform items to array format
+  const transformedItems = transformMyFavorites(items);
 
-  const [myFavorites, setMyFavorites] = useState(transformMyFavorites(items));
+  // Calculate filtered favorites based on current genre
+  const myFavorites =
+    currentGenre > 0
+      ? filter(transformedItems, (item) =>
+          includes(item.genre_ids, currentGenre)
+        )
+      : transformedItems;
 
-  const showScrollToTop = size(myFavorites) >= 100;
+  const showScrollToTop = size(myFavorites) >= THRESHOLDS.SCROLL_TO_TOP;
 
   const handleOpenModal = (recordSelected: any) => {
     setRecord(recordSelected);
@@ -88,20 +120,63 @@ export default function MyFavoriteScene() {
     },
   };
 
-  // filter items by genre if currentGenre is not 0
-  // else reset state to default items
+  // Set loading to false after items are loaded and refresh when items change
   useEffect(() => {
-    setIsLoading(true);
-    const filteredFavorites =
-      currentGenre > 0
-        ? filter(transformMyFavorites(items), (item) =>
-            includes(item.genre_ids, currentGenre)
-          )
-        : transformMyFavorites(items);
-
-    setMyFavorites(filteredFavorites);
     setIsLoading(false);
-  }, [currentGenre]);
+  }, [items]);
+
+  // Add a refresh mechanism to prevent flickering
+  const refreshFavorites = () => {
+    setIsLoading(true);
+    // Force a re-render by updating the component
+    setTimeout(() => {
+      setIsLoading(false);
+    }, 100);
+  };
+
+  // Listen for storage changes to refresh favorites
+  useEffect(() => {
+    const handleStorageChange = () => {
+      refreshFavorites();
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, []);
+
+  // Imperative methods
+  const openModal = (recordSelected: any) => {
+    setRecord(recordSelected);
+    onOpen();
+  };
+
+  const closeModal = () => {
+    onClose();
+  };
+
+  const getFavorites = () => transformedItems;
+  const getFilteredFavorites = () => myFavorites;
+  const isModalOpen = () => isOpen;
+  const isLoadingState = () => isLoading;
+  const clearFavorites = () => {
+    // This would need to be handled by the parent component
+    console.log("Clear all favorites requested");
+  };
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      refreshFavorites,
+      openModal,
+      closeModal,
+      getFavorites,
+      getFilteredFavorites,
+      isModalOpen,
+      isLoading: isLoadingState,
+      clearFavorites,
+    }),
+    [transformedItems, myFavorites, isOpen, isLoading, refreshFavorites]
+  );
 
   return (
     <Fragment>
@@ -110,6 +185,9 @@ export default function MyFavoriteScene() {
       <MyFavoritesTableContainer
         isLoading={isLoading}
         rows={myFavorites}
+        totalRecords={myFavorites.length}
+        page={1}
+        watchPage={() => {}}
         handleOpenModal={handleOpenModal}
         emptyContentLabel={
           currentGenre > 0 ? <FilterEmptyState /> : <DefaultState />
@@ -132,4 +210,7 @@ export default function MyFavoriteScene() {
       ) : null}
     </Fragment>
   );
-}
+});
+
+MyFavoritesScene.displayName = "MyFavoritesScene";
+export default MyFavoritesScene;

@@ -1,4 +1,9 @@
-import React, { useCallback, useMemo } from "react";
+import React, {
+  useCallback,
+  useMemo,
+  useImperativeHandle,
+  forwardRef,
+} from "react";
 import {
   Dropdown,
   DropdownItem,
@@ -6,58 +11,74 @@ import {
   DropdownTrigger,
   DropdownMenu,
 } from "@nextui-org/react";
-import { useSelector } from "react-redux";
 import { map, sortBy } from "lodash";
 import { useTranslation } from "react-i18next";
-import { Effect, pipe } from "effect";
+import { useCurrentScene } from "../../../packages/store";
+import { UI_DIMENSIONS } from "../../../packages/constants";
 
-import { RootState } from "../../redux/store";
 import { VerticalDotsIcon } from "../Icons/VerticalDotsIcon";
 import { moviesGenres, tvSeriesGenres } from "../../constants";
+
+export interface GenreSelectorRef {
+  selectGenre: (genre: number | null) => void;
+  clearSelection: () => void;
+  getSelectedGenre: () => number | null;
+  getAvailableGenres: () => Array<[string, string]>;
+}
 
 type GenreSelectorProps = {
   selectedGenre: number | null;
   onGenreChange: (genre: number | null) => void;
 };
 
-const GenreSelector: React.FC<GenreSelectorProps> = React.memo(
-  ({ selectedGenre, onGenreChange }) => {
+const GenreSelector = forwardRef<GenreSelectorRef, GenreSelectorProps>(
+  ({ selectedGenre, onGenreChange }, ref) => {
     const { t } = useTranslation();
+    const currentScene = useCurrentScene();
 
-    const currentScene = useSelector(
-      (state: RootState) => state.scene.currentScene
-    );
-
-    const getGenres = pipe(
-      Effect.sync(() =>
-        currentScene === "series" ? tvSeriesGenres : moviesGenres
-      ),
-      Effect.map((genres) => Object.entries(genres)),
-      Effect.map((entries) => sortBy(entries, ([id]) => (id === "0" ? 1 : 0))),
-      Effect.runSync
-    );
+    const getGenres = useMemo((): Array<[string, string]> => {
+      const genres = currentScene === "series" ? tvSeriesGenres : moviesGenres;
+      const entries = Object.entries(genres);
+      return sortBy(entries, ([id]) => (id === "0" ? 1 : 0));
+    }, [currentScene]);
 
     const selectedKeys = useMemo(
-      () =>
-        pipe(
-          Effect.sync(() => selectedGenre),
-          Effect.map((genre) =>
-            genre ? map([genre], (key) => key.toString()) : []
-          ),
-          Effect.runSync
-        ),
+      (): string[] =>
+        selectedGenre ? map([selectedGenre], (key) => key.toString()) : [],
       [selectedGenre]
     );
 
     const handleGenreChange = useCallback(
-      (key: string | null) =>
-        pipe(
-          Effect.sync(() => key),
-          Effect.map((k) => (k ? Number(k) : null)),
-          Effect.tap((genre) => Effect.sync(() => onGenreChange(genre))),
-          Effect.runSync
-        ),
+      (key: string | null) => {
+        const genre = key ? Number(key) : null;
+        onGenreChange(genre);
+      },
       [onGenreChange]
+    );
+
+    const selectGenre = useCallback(
+      (genre: number | null) => {
+        onGenreChange(genre);
+      },
+      [onGenreChange]
+    );
+
+    const clearSelection = useCallback(() => {
+      onGenreChange(null);
+    }, [onGenreChange]);
+
+    const getSelectedGenre = useCallback(() => selectedGenre, [selectedGenre]);
+    const getAvailableGenres = useCallback(() => getGenres, [getGenres]);
+
+    useImperativeHandle(
+      ref,
+      () => ({
+        selectGenre,
+        clearSelection,
+        getSelectedGenre,
+        getAvailableGenres,
+      }),
+      [selectGenre, clearSelection, getSelectedGenre, getAvailableGenres]
     );
 
     const reorderedGenres = getGenres;
@@ -71,8 +92,8 @@ const GenreSelector: React.FC<GenreSelectorProps> = React.memo(
               style={{
                 padding: "4px",
                 minWidth: "auto",
-                width: "32px",
-                height: "32px",
+                width: `${UI_DIMENSIONS.BUTTONS.ICON_SIZE}px`,
+                height: `${UI_DIMENSIONS.BUTTONS.ICON_SIZE}px`,
               }}
             >
               <VerticalDotsIcon />
@@ -99,5 +120,7 @@ const GenreSelector: React.FC<GenreSelectorProps> = React.memo(
     );
   }
 );
+
+GenreSelector.displayName = "GenreSelector";
 
 export default GenreSelector;

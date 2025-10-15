@@ -1,9 +1,18 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useImperativeHandle, forwardRef } from "react";
 import { GithubIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Effect, pipe } from "effect";
+import { UI_DIMENSIONS } from "../../../packages/constants";
 
-export function Footer() {
+export interface FooterRef {
+  show: () => void;
+  hide: () => void;
+  toggle: () => void;
+  isVisible: () => boolean;
+  getCurrentYear: () => number;
+}
+
+const Footer = forwardRef<FooterRef, {}>(({}, ref) => {
   const { t } = useTranslation();
 
   const currentYear = new Date().getFullYear();
@@ -16,6 +25,24 @@ export function Footer() {
       Effect.runSync
     );
   }, []);
+
+  const show = () => setIsVisible(true);
+  const hide = () => setIsVisible(false);
+  const toggle = () => setIsVisible((prev) => !prev);
+  const isVisibleCheck = () => isVisible;
+  const getCurrentYear = () => currentYear;
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      show,
+      hide,
+      toggle,
+      isVisible: isVisibleCheck,
+      getCurrentYear,
+    }),
+    [isVisible, currentYear]
+  );
 
   return (
     <footer
@@ -39,13 +66,15 @@ export function Footer() {
           className="text-gray-700 transition-colors hover:text-gray-900 group"
         >
           <GithubIcon
-            size={24}
+            size={UI_DIMENSIONS.ICONS.MEDIUM}
             className="transition-transform duration-300 ease-in-out transform group-hover:rotate-12 group-hover:scale-110"
           />
         </a>
       </div>
     </footer>
   );
-}
+});
+
+Footer.displayName = "Footer";
 
 export default Footer;

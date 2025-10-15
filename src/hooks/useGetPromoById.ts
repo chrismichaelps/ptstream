@@ -1,6 +1,6 @@
 import { useMutation, UseMutationResult } from "@tanstack/react-query";
 
-import PromoService from "../services/PromoService";
+import { PromoService } from "../../packages/services";
 
 const { getPromoById } = PromoService;
 

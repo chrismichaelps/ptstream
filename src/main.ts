@@ -1,6 +1,19 @@
+/**
+ * Electron Main Process
+ * 
+ * This file handles the main Electron process including window creation,
+ * security configuration, and external URL blocking.
+ */
+
 import { ElectronBlocker } from '@cliqz/adblocker-electron';
 import { app, BrowserWindow, session } from 'electron';
 import path from 'path';
+import { UI_DIMENSIONS } from "../packages/constants";
+import {
+  SECURITY_ACTIONS,
+  isAllowedDomain,
+  getAllowedDomains
+} from './config';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) {
@@ -10,8 +23,8 @@ if (require('electron-squirrel-startup')) {
 const createWindow = () => {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
-    width: 900,
-    height: 720,
+    width: UI_DIMENSIONS.WINDOW.WIDTH,
+    height: UI_DIMENSIONS.WINDOW.HEIGHT,
     resizable: false,
     autoHideMenuBar: true,
     center: true,
@@ -33,6 +46,49 @@ const createWindow = () => {
   // block ads
   ElectronBlocker.fromPrebuiltAdsAndTracking(fetch).then((blocker) => {
     blocker.enableBlockingInSession(session.defaultSession);
+  });
+
+  // Block popup windows and external views (except GitHub)
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    try {
+      const urlObj = new URL(url);
+
+      // Allow configured domains
+      if (isAllowedDomain(urlObj.hostname)) {
+        console.log('Allowed domain popup:', url);
+        return { action: SECURITY_ACTIONS.ALLOW };
+      }
+
+      // Block all other popups
+      console.log('Popup blocked:', url);
+      console.log('Allowed domains:', getAllowedDomains());
+      return { action: SECURITY_ACTIONS.DENY };
+    } catch (error) {
+      console.log('Invalid URL blocked:', url);
+      return { action: SECURITY_ACTIONS.DENY };
+    }
+  });
+
+  // Block new window requests
+  mainWindow.webContents.on('did-attach-webview', (event) => {
+    console.log('Webview attachment blocked');
+    event.preventDefault();
+  });
+
+  // Block external navigation (except GitHub)
+  mainWindow.webContents.on('will-navigate', (event, navigationUrl) => {
+    const url = new URL(navigationUrl);
+
+    // Allow configured domains
+    if (isAllowedDomain(url.hostname)) {
+      console.log('Allowed domain navigation:', navigationUrl);
+      return; // Allow the navigation
+    }
+
+    // Block all other external navigation
+    console.log('External navigation blocked:', navigationUrl);
+    console.log('Allowed domains:', getAllowedDomains());
+    event.preventDefault();
   });
 
   // Open the DevTools.

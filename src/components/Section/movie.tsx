@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useImperativeHandle, forwardRef } from "react";
 import { Badge, Button, Image, Spinner } from "@nextui-org/react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -234,71 +234,127 @@ const DefaultState = ({
   );
 };
 
-export const Section = ({ item }: MovieSectionProps) => {
-  const [watchNow, setWatchNow] = useState(false);
-  const [watchPromo, setWatchPromo] = useState(false);
-  const [promo, setPromo] = useState<PromoResult>();
-  const movie = item;
+export interface MovieSectionRef {
+  startWatching: () => void;
+  stopWatching: () => void;
+  watchPromo: () => void;
+  closePromo: () => void;
+  isWatching: () => boolean;
+  isPromoOpen: () => boolean;
+  getMovieInfo: () => UniqueMovie;
+  refreshPromo: () => void;
+}
 
-  const handleBack = () => {
-    setWatchNow(false);
-  };
+export const Section = forwardRef<MovieSectionRef, MovieSectionProps>(
+  ({ item }, ref) => {
+    const [watchNow, setWatchNow] = useState(false);
+    const [watchPromo, setWatchPromo] = useState(false);
+    const [promo, setPromo] = useState<PromoResult>();
+    const movie = item;
 
-  const { mutate: mutatePromo } = useGetPromoById({
-    onSuccess: (data: PromoReturnType) => {
-      setPromo(data.results);
-    },
-    onError: (error: Error) => {
-      console.error("Error fetching promo by movie id:", error);
-    },
-  });
+    const handleBack = () => {
+      setWatchNow(false);
+    };
 
-  // get promo for a particular movie
-  useEffect(() => {
-    if (movie.id) {
-      mutatePromo({ id: `movie/${movie.id}` });
-    }
-  }, [movie.id]);
+    const { mutate: mutatePromo } = useGetPromoById({
+      onSuccess: (data: PromoReturnType) => {
+        setPromo(data.results);
+      },
+      onError: (error: Error) => {
+        console.error("Error fetching promo by movie id:", error);
+      },
+    });
 
-  return (
-    <div className="relative">
-      {watchPromo ? (
-        <PlyrVideoPlayer
-          promo={promo}
-          onClosePlayer={() => setWatchPromo(false)}
-        />
-      ) : null}
+    // get promo for a particular movie
+    useEffect(() => {
+      if (movie.id) {
+        mutatePromo({ id: `movie/${movie.id}` });
+      }
+    }, [movie.id]);
 
-      <AnimatePresence>
-        {watchNow ? (
-          <motion.div
-            key="streaming"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.3 }}
-          >
-            <StreamingVideo movie={movie} onBack={handleBack} />
-          </motion.div>
-        ) : (
-          <motion.div
-            key="default"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.3 }}
-          >
-            <DefaultState
-              movie={movie}
-              onWatchNow={() => setWatchNow(true)}
-              onWatchPromo={() => setWatchPromo(true)}
-            />
-          </motion.div>
-        )}
-        {!!watchNow ? null : (
-          <FavoriteButton item={merge(item, { media_type: "movie" })} />
-        )}
-      </AnimatePresence>
-    </div>
-  );
-};
+    // Imperative methods
+    const startWatching = () => {
+      setWatchNow(true);
+    };
+
+    const stopWatching = () => {
+      setWatchNow(false);
+    };
+
+    const openPromo = () => {
+      setWatchPromo(true);
+    };
+
+    const closePromo = () => {
+      setWatchPromo(false);
+    };
+
+    const isWatching = () => watchNow;
+    const isPromoOpen = () => watchPromo;
+    const getMovieInfo = () => movie;
+    const refreshPromo = () => {
+      if (movie.id) {
+        mutatePromo({ id: `movie/${movie.id}` });
+      }
+    };
+
+    useImperativeHandle(
+      ref,
+      () => ({
+        startWatching,
+        stopWatching,
+        watchPromo: openPromo,
+        closePromo,
+        isWatching,
+        isPromoOpen,
+        getMovieInfo,
+        refreshPromo,
+      }),
+      [watchNow, watchPromo, movie, mutatePromo]
+    );
+
+    return (
+      <div className="relative">
+        {watchPromo ? (
+          <PlyrVideoPlayer
+            promo={promo}
+            onClosePlayer={() => setWatchPromo(false)}
+          />
+        ) : null}
+
+        <AnimatePresence>
+          {watchNow ? (
+            <motion.div
+              key="streaming"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+            >
+              <StreamingVideo movie={movie} onBack={handleBack} />
+            </motion.div>
+          ) : (
+            <motion.div
+              key="default"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+            >
+              <DefaultState
+                movie={movie}
+                onWatchNow={() => setWatchNow(true)}
+                onWatchPromo={() => setWatchPromo(true)}
+              />
+            </motion.div>
+          )}
+          {!!watchNow ? null : (
+            <FavoriteButton item={merge(item, { media_type: "movie" })} />
+          )}
+        </AnimatePresence>
+      </div>
+    );
+  }
+);
+
+Section.displayName = "MovieSection";

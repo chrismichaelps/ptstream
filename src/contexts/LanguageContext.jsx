@@ -1,43 +1,32 @@
 
-import React, { createContext, useContext, useState, useEffect } from "react";
-import { Effect, pipe } from "effect";
+import React, { createContext, useContext, useMemo } from "react";
+import { Effect } from "effect";
+import { useEffect, useEffectSync } from "./EffectContext";
+import { LanguageService } from "../../packages/services";
 
 const LanguageContext = createContext();
 
-const getStoredLanguage = () =>
-  pipe(
-    Effect.sync(() => localStorage.getItem("appLang")),
-    Effect.map((storedLang) => storedLang || "en"),
-    Effect.runSync
-  );
-
-const setStoredLanguage = (lang) =>
-  pipe(
-    Effect.sync(() => lang),
-    Effect.tap((currentLang) => 
-      Effect.sync(() => localStorage.setItem("appLang", currentLang))
-    ),
-    Effect.runSync
-  );
-
 export const LanguageProvider = ({ children }) => {
-  const [lang, setLang] = useState(() => getStoredLanguage());
-  
-  useEffect(() => {
-    pipe(
-      Effect.sync(() => lang),
-      Effect.tap((currentLang) => Effect.sync(() => setStoredLanguage(currentLang))),
-      Effect.runSync
-    );
-  }, [lang]);
+  const languageService = useEffectSync(LanguageService);
+
+  const contextValue = useMemo(() => ({
+    lang: useEffectSync(languageService.getLanguage()),
+    setLang: (newLang) => {
+      useEffectSync(languageService.setLanguage(newLang));
+    }
+  }), [languageService]);
 
   return (
-    <LanguageContext.Provider value={{ lang, setLang }}>
+    <LanguageContext.Provider value={contextValue}>
       {children}
     </LanguageContext.Provider>
   );
 };
 
 export const useLanguage = () => {
-  return useContext(LanguageContext);
+  const context = useContext(LanguageContext);
+  if (!context) {
+    throw new Error("useLanguage must be used within a LanguageProvider");
+  }
+  return context;
 };

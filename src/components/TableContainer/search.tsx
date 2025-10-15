@@ -1,13 +1,29 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useImperativeHandle, forwardRef } from "react";
 import { Spinner, Image, Input, Chip } from "@nextui-org/react";
 import { useTranslation } from "react-i18next";
 import { get, map, size, truncate } from "lodash";
 
 import { SerieResult, UniqueSerie } from "../../types";
+import { UI_DIMENSIONS } from "../../../packages/constants";
 import { SearchIcon } from "../Icons/SearchIcon";
 import TvIcon from "../Icons/TvIcon";
 import MovieIcon from "../Icons/MovieIcon";
-import useSearchState from "../../hooks/useSearchState";
+import {
+  useSearchQuery,
+  useStoreDispatch,
+  setSearchQuery,
+  clearSearchQuery,
+} from "../../../packages/store";
+
+export interface SearchTableContainerRef {
+  clearSearch: () => void;
+  setSearchQuery: (query: string) => void;
+  getSearchQuery: () => string;
+  getResults: () => SerieResult;
+  getResultCount: () => number;
+  scrollToTop: () => void;
+  refreshResults: () => void;
+}
 
 type TableContainerProps = {
   rows: SerieResult;
@@ -18,17 +34,14 @@ type TableContainerProps = {
   isLoading?: boolean;
 };
 
-export const TableContainer = ({
-  rows,
-  handleOpenModal,
-  emptyContentLabel,
-  isLoading,
-}: TableContainerProps) => {
+export const TableContainer = forwardRef<
+  SearchTableContainerRef,
+  TableContainerProps
+>(({ rows, handleOpenModal, emptyContentLabel, isLoading }, ref) => {
   const { t } = useTranslation();
 
-  const searchState = useSearchState();
-
-  const term = searchState.get("inputValue");
+  const dispatch = useStoreDispatch();
+  const term = useSearchQuery();
 
   const renderUserCard = useCallback(
     (row: UniqueSerie) => {
@@ -46,8 +59,8 @@ export const TableContainer = ({
               className="object-cover rounded-lg"
               src={`https://image.tmdb.org/t/p/w185${get(row, "poster_path")}`}
               fallbackSrc="https://via.placeholder.com/300x300"
-              height={120}
-              width={80}
+              height={UI_DIMENSIONS.IMAGES.POSTER.HEIGHT}
+              width={UI_DIMENSIONS.IMAGES.POSTER.WIDTH}
             />
             {/* Media Type Label Below Image */}
             <div className="mt-2 text-center">
@@ -102,8 +115,8 @@ export const TableContainer = ({
               isLoading ? <Spinner size="sm" color="default" /> : null
             }
             value={term}
-            onValueChange={(value) => searchState.set("inputValue", value)}
-            onClear={() => searchState.clear()}
+            onValueChange={(value) => dispatch(setSearchQuery(value))}
+            onClear={() => dispatch(clearSearchQuery())}
           />
         </div>
       </div>
@@ -130,6 +143,40 @@ export const TableContainer = ({
 
   const mainClass = size(rows) > 0 ? "mt-4" : "mt-20";
 
+  // Imperative methods
+  const clearSearch = () => {
+    dispatch(clearSearchQuery());
+  };
+
+  const setSearchQueryValue = (query: string) => {
+    dispatch(setSearchQuery(query));
+  };
+
+  const getSearchQuery = () => term;
+  const getResults = () => rows;
+  const getResultCount = () => size(rows);
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+  const refreshResults = () => {
+    // This would need to be handled by the parent component
+    console.log("Refresh search results requested");
+  };
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      clearSearch,
+      setSearchQuery: setSearchQueryValue,
+      getSearchQuery,
+      getResults,
+      getResultCount,
+      scrollToTop,
+      refreshResults,
+    }),
+    [term, rows, dispatch]
+  );
+
   return (
     <div>
       {topContent}
@@ -139,4 +186,6 @@ export const TableContainer = ({
       </div>
     </div>
   );
-};
+});
+
+TableContainer.displayName = "SearchTableContainer";

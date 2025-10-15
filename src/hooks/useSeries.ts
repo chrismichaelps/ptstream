@@ -1,6 +1,6 @@
 import { useMutation, UseMutationResult } from "@tanstack/react-query";
 
-import SerieService from "../services/SerieService";
+import { SerieService } from "../../packages/services";
 import { SerieFilter } from "../types";
 
 const { all } = SerieService;

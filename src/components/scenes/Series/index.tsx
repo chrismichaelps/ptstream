@@ -1,15 +1,23 @@
-import { useState, useCallback, Fragment, useEffect, useRef } from "react";
-import { useSelector } from "react-redux";
+import {
+  useState,
+  useCallback,
+  Fragment,
+  useEffect,
+  useRef,
+  useImperativeHandle,
+  forwardRef,
+} from "react";
 import { useDisclosure } from "@nextui-org/react";
 import { unionBy, set, size } from "lodash";
 import { useTranslation } from "react-i18next";
+import { useSelectedGenre } from "../../../../packages/store";
+import { THRESHOLDS } from "../../../../packages/constants";
 
 import { SerieResult, SerieReturnType, UniqueSerie } from "../../../types";
 import useSeries from "../../../hooks/useSeries";
 import { SerieTableContainer } from "../../TableContainer";
 import { ModalContainer } from "../../ModalContainer";
 import { SerieSection } from "../../Section";
-import { RootState } from "../../../redux/store";
 import ScrollToTopButton from "../../../components/ScrollToTopButton";
 import { GENRE_RESET_FILTER } from "../../../constants";
 import useSeasonSelected from "../../../hooks/useSeasonSelected";
@@ -25,7 +33,20 @@ const EmptyState = () => {
   );
 };
 
-export default function SerieScene() {
+export interface SeriesSceneRef {
+  loadSeries: (genre?: number) => void;
+  clearSeries: () => void;
+  openModal: (record: UniqueSerie) => void;
+  closeModal: () => void;
+  getSeries: () => SerieResult;
+  getCurrentPage: () => number;
+  getTotalPages: () => number | undefined;
+  isModalOpen: () => boolean;
+  isLoading: () => boolean;
+  refreshSeries: () => void;
+}
+
+const SeriesScene = forwardRef<SeriesSceneRef, {}>(({}, ref) => {
   const [series, setSeries] = useState<SerieResult>([]);
   const [totalRecords, setTotalRecords] = useState<number>();
   const [page, setPage] = useState<number>(1);
@@ -33,9 +54,7 @@ export default function SerieScene() {
 
   const prevGenreRef = useRef<number>(GENRE_RESET_FILTER);
 
-  const currentGenre = useSelector(
-    (state: RootState) => state.genre.selectedGenre
-  );
+  const currentGenre = useSelectedGenre();
 
   const { t } = useTranslation();
 
@@ -43,7 +62,7 @@ export default function SerieScene() {
 
   const selectedSeasonState = useSeasonSelected();
 
-  const showScrollToTop = size(series) >= 100;
+  const showScrollToTop = size(series) >= THRESHOLDS.SCROLL_TO_TOP;
 
   const handleCloseModal = () => {
     selectedSeasonState.clear();
@@ -100,6 +119,56 @@ export default function SerieScene() {
   const isLoading = status === "pending";
   const emptyState = !isLoading && size(series) === 0;
 
+  // Imperative methods
+  const loadSeries = (genre?: number) => {
+    if (genre !== undefined) {
+      // This would need to be handled by the parent component
+      console.log("Load series with genre:", genre);
+    } else {
+      makeRequest();
+    }
+  };
+
+  const clearSeries = () => {
+    reset();
+  };
+
+  const openModal = (recordSelected: UniqueSerie) => {
+    setRecord(recordSelected);
+    onOpen();
+  };
+
+  const closeModal = () => {
+    selectedSeasonState.clear();
+    onClose();
+  };
+
+  const getSeries = () => series;
+  const getCurrentPage = () => page;
+  const getTotalPages = () => totalRecords;
+  const isModalOpen = () => isOpen;
+  const isLoadingState = () => isLoading;
+  const refreshSeries = () => {
+    makeRequest();
+  };
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      loadSeries,
+      clearSeries,
+      openModal,
+      closeModal,
+      getSeries,
+      getCurrentPage,
+      getTotalPages,
+      isModalOpen,
+      isLoading: isLoadingState,
+      refreshSeries,
+    }),
+    [series, page, totalRecords, isOpen, isLoading, makeRequest, reset]
+  );
+
   return (
     <Fragment>
       <SeoContainer title={`${t("Navigation_Home")} - ${t("Series_Title")}`} />
@@ -125,4 +194,7 @@ export default function SerieScene() {
       />
     </Fragment>
   );
-}
+});
+
+SeriesScene.displayName = "SeriesScene";
+export default SeriesScene;

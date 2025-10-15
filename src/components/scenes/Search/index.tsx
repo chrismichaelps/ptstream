@@ -1,7 +1,8 @@
-import { Fragment } from "react";
+import { Fragment, useImperativeHandle, forwardRef } from "react";
 import { Chip, useDisclosure } from "@nextui-org/react";
 import { chain, includes, map, size } from "lodash";
 import { useTranslation } from "react-i18next";
+import { THRESHOLDS } from "../../../../packages/constants";
 
 import { SearchTableContainer } from "../../TableContainer";
 import { ModalContainer } from "../../ModalContainer";
@@ -9,7 +10,18 @@ import { MovieSection, SerieSection } from "../../Section";
 import ScrollToTopButton from "../../../components/ScrollToTopButton";
 import useSearchHandler from "../../../hooks/useSearchHandler";
 import { MediaType } from "../../../types";
-import useSearchState from "../../../hooks/useSearchState";
+import {
+  useSearchRecords,
+  useSelectedRecord,
+  useTotalRecords,
+  useCurrentPage,
+  useStoreDispatch,
+  setSearchRecords,
+  setCurrentPage,
+  setTotalRecords,
+  setSelectedRecord,
+  setSearchQuery,
+} from "../../../../packages/store";
 import SeoContainer from "../../../components/SeoContainer";
 
 const defaultSearchTerms = [
@@ -71,18 +83,30 @@ const ModalContent = ({
   return scenes[mediaType] || null;
 };
 
-const SerieScene = () => {
-  const searchState = useSearchState();
-  const { isOpen, onOpen, onClose } = useDisclosure();
+export interface SearchSceneRef {
+  performSearch: (query: string) => void;
+  clearSearch: () => void;
+  openModal: (record: any) => void;
+  closeModal: () => void;
+  getSearchResults: () => any[];
+  getCurrentPage: () => number;
+  getTotalPages: () => number;
+  isModalOpen: () => boolean;
+  isLoading: () => boolean;
+}
 
+const SearchScene = forwardRef<SearchSceneRef, {}>(({}, ref) => {
+  const { isOpen, onOpen, onClose } = useDisclosure();
   const { t } = useTranslation();
 
-  const records = searchState.get("records");
-  const record = searchState.get("record");
-  const totalRecords = searchState.get("totalRecords");
-  const page = searchState.get("page");
+  // Store-based state hooks
+  const records = useSearchRecords();
+  const record = useSelectedRecord();
+  const totalRecords = useTotalRecords();
+  const page = useCurrentPage();
+  const dispatch = useStoreDispatch();
 
-  const showScrollToTop = size(records) >= 100;
+  const showScrollToTop = size(records) >= THRESHOLDS.SCROLL_TO_TOP;
 
   const filterOutMediaTypes = (mediaTypes: string[], data: any) =>
     chain(data)
@@ -93,22 +117,63 @@ const SerieScene = () => {
     (data) => {
       const filteredResults = filterOutMediaTypes(["person"], data.results);
 
-      searchState.set("records", filteredResults);
-      searchState.set("page", data.page);
-      searchState.set("totalRecords", data.total_pages);
+      dispatch(setSearchRecords(filteredResults));
+      dispatch(setCurrentPage(data.page));
+      dispatch(setTotalRecords(data.total_pages));
     },
     (searchQuery: string) => {
-      searchState.set("inputValue", searchQuery);
+      dispatch(setSearchQuery(searchQuery));
     }
   );
 
   const handleOpenModal = (recordSelected: any) => {
-    searchState.set("record", recordSelected);
+    dispatch(setSelectedRecord(recordSelected));
     onOpen();
   };
 
-  const handleSelectTerm = (term: string) =>
-    searchState.set("inputValue", term);
+  const handleSelectTerm = (term: string) => dispatch(setSearchQuery(term));
+
+  // Imperative methods
+  const performSearch = (query: string) => {
+    dispatch(setSearchQuery(query));
+  };
+
+  const clearSearch = () => {
+    dispatch(setSearchRecords([]));
+    dispatch(setCurrentPage(1));
+    dispatch(setTotalRecords(0));
+  };
+
+  const openModal = (recordSelected: any) => {
+    dispatch(setSelectedRecord(recordSelected));
+    onOpen();
+  };
+
+  const closeModal = () => {
+    onClose();
+  };
+
+  const getSearchResults = () => records;
+  const getCurrentPage = () => page;
+  const getTotalPages = () => totalRecords;
+  const isModalOpen = () => isOpen;
+  const isLoadingState = () => isLoading;
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      performSearch,
+      clearSearch,
+      openModal,
+      closeModal,
+      getSearchResults,
+      getCurrentPage,
+      getTotalPages,
+      isModalOpen,
+      isLoading: isLoadingState,
+    }),
+    [records, page, totalRecords, isOpen, isLoading, dispatch]
+  );
 
   return (
     <Fragment>
@@ -143,6 +208,7 @@ const SerieScene = () => {
       ) : null}
     </Fragment>
   );
-};
+});
 
-export default SerieScene;
+SearchScene.displayName = "SearchScene";
+export default SearchScene;

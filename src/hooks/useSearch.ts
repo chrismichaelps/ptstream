@@ -1,6 +1,6 @@
 import { useMutation, UseMutationResult } from "@tanstack/react-query";
 
-import SearchService from "../services/SearchService";
+import { SearchService } from "../../packages/services";
 
 const { search } = SearchService;
 

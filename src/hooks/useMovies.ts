@@ -1,6 +1,6 @@
 import { useMutation, UseMutationResult } from "@tanstack/react-query";
 
-import MovieService from "../services/MovieService";
+import { MovieService } from "../../packages/services";
 import { MovieFilter } from "../types";
 
 const { all } = MovieService;
