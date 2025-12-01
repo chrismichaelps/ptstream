@@ -1,4 +1,4 @@
-import { createRootRoute, Outlet, useRouter } from '@tanstack/react-router';
+import { createRootRoute, Outlet, useRouter, useLocation } from '@tanstack/react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { NextUIProvider, Switch } from '@nextui-org/react';
 import { ThemeProvider as NextThemesProvider, useTheme } from 'next-themes';
@@ -32,6 +32,7 @@ const scenes: Record<Scene, SceneConfig> = {
 function RootComponent() {
   const { resolvedTheme } = useTheme();
   const router = useRouter();
+  const location = useLocation();
   const dispatch = useStoreDispatch();
 
   const currentScene = useCurrentScene() || 'series';
@@ -56,7 +57,7 @@ function RootComponent() {
   };
 
   const sceneIcon = scenes[currentScene]?.icon || scenes.series.icon;
-  const isRootPath = router.state.location.pathname === '/';
+  const isRootPath = location.pathname === '/';
 
   return (
     <div
@@ -70,14 +71,14 @@ function RootComponent() {
         <div className="flex gap-4 items-center">
           {isRootPath ? (
             <Switch
-              defaultChecked={currentScene === 'series'}
+              checked={currentScene === 'movies'}
               size="md"
               color="default"
               onChange={handleSceneSwitch}
               thumbIcon={() => sceneIcon}
             />
           ) : null}
-          {router.state.location.pathname !== '/search' ? (
+          {location.pathname !== '/search' ? (
             <GenreSelector
               selectedGenre={selectedGenre}
               onGenreChange={handleGenreChange}
