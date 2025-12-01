@@ -1,5 +1,6 @@
 import type { ConfigEnv, UserConfig } from 'vite';
 import { defineConfig } from 'vite';
+import { TanStackRouterVite } from '@tanstack/router-plugin/vite';
 import { pluginExposeRenderer } from './vite.base.config';
 
 // https://vitejs.dev/config
@@ -15,7 +16,13 @@ export default defineConfig((env) => {
     build: {
       outDir: `.vite/renderer/${name}`,
     },
-    plugins: [pluginExposeRenderer(name)],
+    plugins: [
+      TanStackRouterVite({
+        routesDirectory: './src/routes',
+        generatedRouteTree: './src/routeTree.gen.ts',
+      }),
+      pluginExposeRenderer(name),
+    ],
     resolve: {
       preserveSymlinks: true,
     },

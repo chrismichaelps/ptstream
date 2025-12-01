@@ -1,6 +1,6 @@
 import { useEffect, useState, useImperativeHandle, forwardRef } from "react";
 import { Tabs, Tab } from "@nextui-org/react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "@tanstack/react-router";
 import { House, Search, Heart } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { TFunction } from "i18next";
@@ -37,7 +37,7 @@ const translateKeys = (t: TFunction<"translation", undefined>, key: Key) => {
   return t(translationKeys[key]);
 };
 
-const NavBar = forwardRef<NavBarRef, {}>(({}, ref) => {
+const NavBar = forwardRef<NavBarRef, {}>((_, ref) => {
   const navigate = useNavigate();
   const { t } = useTranslation();
 
@@ -48,7 +48,7 @@ const NavBar = forwardRef<NavBarRef, {}>(({}, ref) => {
   useEffect(() => {
     pipe(
       Effect.sync(() => NAVIGATION_MAP[selected]),
-      Effect.tap((path) => Effect.sync(() => navigate(path))),
+      Effect.tap((path) => Effect.sync(() => navigate({ to: path }))),
       Effect.runSync
     );
   }, [selected, navigate]);
@@ -68,7 +68,7 @@ const NavBar = forwardRef<NavBarRef, {}>(({}, ref) => {
 
   const navigateTo = (key: Key) => {
     setSelected(key);
-    navigate(NAVIGATION_MAP[key]);
+    navigate({ to: NAVIGATION_MAP[key] });
   };
 
   const getCurrentTab = () => selected;
