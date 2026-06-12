@@ -1,5 +1,4 @@
-import { useState, useImperativeHandle, forwardRef } from "react";
-import { Effect, pipe } from "effect";
+import { useState } from "react";
 import {
   Dropdown,
   DropdownTrigger,
@@ -14,48 +13,17 @@ import { Settings } from "lucide-react";
 import i18n from "../../localization/i18n";
 import { UI_DIMENSIONS } from "../../../packages/constants";
 
-export interface SettingRef {
-  changeLanguage: (language: string) => void;
-  getCurrentLanguage: () => string;
-  resetToDefault: () => void;
-}
-
-const Setting = forwardRef<SettingRef, {}>(({}, ref) => {
+const Setting = () => {
   const { t } = useTranslation();
   const [selectedLang, setSelectedLang] = useState(i18n.language);
 
-  const handleChangeLanguage = (event: React.ChangeEvent<HTMLSelectElement>) =>
-    pipe(
-      Effect.sync(() => event.target.value),
-      Effect.tap((newLang) => Effect.sync(() => i18n.changeLanguage(newLang))),
-      Effect.tap((newLang) => Effect.sync(() => setSelectedLang(newLang))),
-      Effect.runSync
-    );
-
-  const changeLanguage = (language: string) => {
-    pipe(
-      Effect.sync(() => language),
-      Effect.tap((newLang) => Effect.sync(() => i18n.changeLanguage(newLang))),
-      Effect.tap((newLang) => Effect.sync(() => setSelectedLang(newLang))),
-      Effect.runSync
-    );
+  const handleChangeLanguage = (
+    event: React.ChangeEvent<HTMLSelectElement>
+  ) => {
+    const newLang = event.target.value;
+    i18n.changeLanguage(newLang);
+    setSelectedLang(newLang);
   };
-
-  const getCurrentLanguage = () => selectedLang;
-
-  const resetToDefault = () => {
-    changeLanguage("en"); // Default to English
-  };
-
-  useImperativeHandle(
-    ref,
-    () => ({
-      changeLanguage,
-      getCurrentLanguage,
-      resetToDefault,
-    }),
-    [selectedLang]
-  );
 
   return (
     <Dropdown
@@ -92,9 +60,9 @@ const Setting = forwardRef<SettingRef, {}>(({}, ref) => {
             }}
             endContent={
               <select
-                className="z-10 outline-none min-w-[100px] px-2 py-1 rounded-md text-sm 
-                  border-small border-default-300 dark:border-default-200 
-                  bg-default-100/50 dark:bg-default-50/50 
+                className="z-10 outline-none min-w-[100px] px-2 py-1 rounded-md text-sm
+                  border-small border-default-300 dark:border-default-200
+                  bg-default-100/50 dark:bg-default-50/50
                   hover:bg-default-200/50 dark:hover:bg-default-100/50
                   transition-colors"
                 id="lang"
@@ -115,8 +83,6 @@ const Setting = forwardRef<SettingRef, {}>(({}, ref) => {
       </DropdownMenu>
     </Dropdown>
   );
-});
-
-Setting.displayName = "Setting";
+};
 
 export default Setting;

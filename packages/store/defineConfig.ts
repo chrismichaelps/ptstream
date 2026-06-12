@@ -1,5 +1,5 @@
 import { StoreState, StoreConfig, StoreMiddleware } from "./types";
-import { createLoggerMiddleware, createDevToolsMiddleware } from "../services/logger";
+import { createLoggerMiddleware, createDevToolsMiddleware } from "./middleware";
 
 // Default initial state
 const defaultInitialState: StoreState = {
@@ -33,14 +33,11 @@ export const defineConfig = (config: Partial<StoreConfig> = {}) => {
   const allMiddlewares: StoreMiddleware[] = [
     ...middlewares,
     createLoggerMiddleware({
-      collapsed: false,
       duration: true,
       timestamp: true,
       diff: false,
-      predicate: (getState, action) => {
-        // Log all actions in development, filter in production
-        return process.env.NODE_ENV === 'development';
-      }
+      // Log only in development
+      predicate: () => process.env.NODE_ENV === "development",
     }),
     ...(devTools ? [createDevToolsMiddleware()] : []),
   ];
@@ -49,25 +46,4 @@ export const defineConfig = (config: Partial<StoreConfig> = {}) => {
     initialState,
     middlewares: allMiddlewares,
   };
-};
-
-// Helper to create store with common configurations
-export const createStoreConfig = {
-  // Development store with all middlewares
-  development: () => defineConfig({
-    devTools: true,
-    middlewares: [createLoggerMiddleware()],
-  }),
-
-  // Production store with minimal middlewares
-  production: () => defineConfig({
-    devTools: false,
-    middlewares: [],
-  }),
-
-  // Custom store with specific middlewares
-  custom: (middlewares: StoreMiddleware[], devTools = false) => defineConfig({
-    middlewares,
-    devTools,
-  }),
 };

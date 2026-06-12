@@ -1,53 +1,51 @@
 /**
- * API Constants
- * 
- * Centralized API configuration and endpoints
+ * TMDB API Constants
+ *
+ * Endpoint paths and discovery defaults for the TMDB v3 API.
+ * Credentials and tuning knobs live in `packages/config`.
  */
 
-export const API_CONFIG = {
-  // TMDB API Configuration
-  TMDB: {
-    BASE_URL: 'https://api.themoviedb.org/3',
-    API_KEY: 'a0a7e40dc8162ed7e37aa2fc97db5654',
-    API_KEY_ALT: '7ac6de5ca5060c7504e05da7b218a30c', // Alternative API key
-    ENDPOINTS: {
-      DISCOVER_MOVIE: '/discover/movie',
-      DISCOVER_TV: '/discover/tv',
-      SEARCH_MULTI: '/search/multi',
-      TV_DETAILS: '/tv',
-      MOVIE_DETAILS: '/movie',
-      SEASON_DETAILS: '/tv/{id}/season/{seasonId}',
-      VIDEOS: '/{id}/videos'
-    }
-  },
-
-  // Request Configuration
-  REQUEST: {
-    TIMEOUT: 10000, // 10 seconds
-    RETRY_ATTEMPTS: 3,
-    RETRY_DELAY: 1000 // 1 second
-  },
-
-  // Query Parameters
-  QUERY_PARAMS: {
-    DEFAULT_SORT: 'popularity.desc',
-    INCLUDE_ADULT: false,
-    INCLUDE_VIDEO: true,
-    WITHOUT_KEYWORDS: '478,210024',
-    ORIGINAL_LANGUAGE: 'en'
-  }
+export const TMDB_PATHS = {
+  DISCOVER_MOVIES: "/discover/movie",
+  DISCOVER_SERIES: "/discover/tv",
+  SEARCH_MULTI: "/search/multi",
+  serieDetails: (serieId: number) => `/tv/${serieId}`,
+  seasonDetails: (serieId: number, seasonId: number) =>
+    `/tv/${serieId}/season/${seasonId}`,
+  /** `mediaPath` is a TMDB media path such as `movie/603` or `tv/1399`. */
+  videos: (mediaPath: string) => `/${mediaPath}/videos`
 } as const;
 
-export const API_ENDPOINTS = {
-  MOVIES: {
-    DISCOVER: `${API_CONFIG.TMDB.BASE_URL}${API_CONFIG.TMDB.ENDPOINTS.DISCOVER_MOVIE}?`,
-    SEARCH: `${API_CONFIG.TMDB.BASE_URL}${API_CONFIG.TMDB.ENDPOINTS.SEARCH_MULTI}?`
-  },
-  SERIES: {
-    DISCOVER: `${API_CONFIG.TMDB.BASE_URL}${API_CONFIG.TMDB.ENDPOINTS.DISCOVER_TV}?`,
-    SEARCH: `${API_CONFIG.TMDB.BASE_URL}${API_CONFIG.TMDB.ENDPOINTS.SEARCH_MULTI}?`
-  },
-  SEARCH: {
-    MULTI: `${API_CONFIG.TMDB.BASE_URL}${API_CONFIG.TMDB.ENDPOINTS.SEARCH_MULTI}?`
-  }
+/** TMDB `with_type: 4` filters series down to scripted shows. */
+export const TMDB_SERIE_TYPE_SCRIPTED = 4;
+
+/** TMDB keyword ids excluded from movie discovery (e.g. softcore, talk show). */
+export const TMDB_MOVIE_EXCLUDED_KEYWORDS = "478,210024";
+
+/** TMDB keyword ids excluded from series discovery. */
+export const TMDB_SERIE_EXCLUDED_KEYWORDS =
+  "210024,9755,272877,197251,6513,287501,290799";
+
+/** Extra payloads appended to season detail responses. */
+export const TMDB_SEASON_APPEND_TO_RESPONSE = "keywords,external_ids";
+
+/** Query parameters shared by every discovery request. */
+export const TMDB_DISCOVERY_DEFAULTS = {
+  sort_by: "popularity.desc",
+  include_adult: false,
+  with_original_language: "en"
+} as const;
+
+/** Discovery defaults specific to movies. */
+export const TMDB_MOVIE_DISCOVERY_DEFAULTS = {
+  ...TMDB_DISCOVERY_DEFAULTS,
+  include_video: true,
+  without_keywords: TMDB_MOVIE_EXCLUDED_KEYWORDS
+} as const;
+
+/** Discovery defaults specific to series. */
+export const TMDB_SERIE_DISCOVERY_DEFAULTS = {
+  ...TMDB_DISCOVERY_DEFAULTS,
+  with_type: TMDB_SERIE_TYPE_SCRIPTED,
+  without_keywords: TMDB_SERIE_EXCLUDED_KEYWORDS
 } as const;

@@ -1,34 +1,34 @@
 import { Effect } from "effect";
-import qs from "qs";
 
-import HttpClientService from "../http-client/HttpClientService";
-import { MovieFilter } from "src/types";
-import { API_CONFIG, API_ENDPOINTS } from "../../constants";
+import {
+  TMDB_MOVIE_DISCOVERY_DEFAULTS,
+  TMDB_PATHS
+} from "../../constants";
+import { TmdbClient } from "../tmdb";
 
-export default {
-  all: (props: MovieFilter & { with_genres?: number }) => {
-    const query: MovieFilter = {
-      sort_by: API_CONFIG.QUERY_PARAMS.DEFAULT_SORT,
-      api_key: API_CONFIG.TMDB.API_KEY,
-      include_adult: API_CONFIG.QUERY_PARAMS.INCLUDE_ADULT,
-      include_video: API_CONFIG.QUERY_PARAMS.INCLUDE_VIDEO,
-      without_keywords: API_CONFIG.QUERY_PARAMS.WITHOUT_KEYWORDS,
-      with_original_language: API_CONFIG.QUERY_PARAMS.ORIGINAL_LANGUAGE,
-      ...props,
-    };
+export interface DiscoverMoviesFilter {
+  readonly page: number;
+  readonly with_genres?: number;
+}
 
-    const queryString = qs.stringify(query);
+/** Movie catalog backed by the TMDB discovery API. */
+export class MovieService extends Effect.Service<MovieService>()(
+  "MovieService",
+  {
+    accessors: true,
+    dependencies: [TmdbClient.Default],
+    effect: Effect.gen(function* () {
+      const tmdb = yield* TmdbClient;
 
-    return Effect.gen(function* () {
-      const httpClientService = yield* HttpClientService;
-      return yield* httpClientService.makeRequest(queryString);
-    }).pipe(
-      Effect.provide(
-        HttpClientService.Live({
-          baseUrl: API_ENDPOINTS.MOVIES.DISCOVER,
-        })
-      ),
-      Effect.runPromise
-    );
-  },
-};
+      const discover = (filter: DiscoverMoviesFilter) =>
+        tmdb
+          .get(TMDB_PATHS.DISCOVER_MOVIES, {
+            ...TMDB_MOVIE_DISCOVERY_DEFAULTS,
+            ...filter
+          })
+          .pipe(Effect.withSpan("MovieService.discover", { attributes: { ...filter } }));
+
+      return { discover } as const;
+    })
+  }
+) {}

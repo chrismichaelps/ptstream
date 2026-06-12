@@ -1,15 +1,14 @@
-import { Fragment, useImperativeHandle, forwardRef } from "react";
+import { Fragment, useCallback } from "react";
 import { Chip, useDisclosure } from "@nextui-org/react";
-import { chain, includes, map, size } from "lodash";
 import { useTranslation } from "react-i18next";
-import { THRESHOLDS } from "../../../../packages/constants";
 
+import { THRESHOLDS } from "../../../../packages/constants";
 import { SearchTableContainer } from "../../TableContainer";
 import { ModalContainer } from "../../ModalContainer";
 import { MovieSection, SerieSection } from "../../Section";
 import ScrollToTopButton from "../../../components/ScrollToTopButton";
 import useSearchHandler from "../../../hooks/useSearchHandler";
-import { MediaType } from "../../../types";
+import { SearchMediaItem, UniqueMovie, UniqueSerie } from "../../../types";
 import {
   useSearchRecords,
   useSelectedRecord,
@@ -51,7 +50,7 @@ const DefaultState = ({
       <div className="text-sm text-default-500">
         <p>{t("Search_DefaultState_Text3")}</p>
         <div className="flex flex-wrap justify-center gap-2 mt-2">
-          {map(terms, (term) => (
+          {terms.map((term) => (
             <Chip
               key={term}
               className="transition duration-300 cursor-pointer"
@@ -68,34 +67,17 @@ const DefaultState = ({
   );
 };
 
-const ModalContent = ({
-  mediaType,
-  record,
-}: {
-  mediaType: MediaType;
-  record: any;
-}) => {
-  const scenes = {
-    movie: <MovieSection item={record} />,
-    tv: <SerieSection item={record} />,
-  };
-
-  return scenes[mediaType] || null;
+const ModalContent = ({ record }: { record: SearchMediaItem }) => {
+  if (record.media_type === "movie") {
+    return <MovieSection item={record as UniqueMovie} />;
+  }
+  if (record.media_type === "tv") {
+    return <SerieSection item={record as UniqueSerie} />;
+  }
+  return null;
 };
 
-export interface SearchSceneRef {
-  performSearch: (query: string) => void;
-  clearSearch: () => void;
-  openModal: (record: any) => void;
-  closeModal: () => void;
-  getSearchResults: () => any[];
-  getCurrentPage: () => number;
-  getTotalPages: () => number;
-  isModalOpen: () => boolean;
-  isLoading: () => boolean;
-}
-
-const SearchScene = forwardRef<SearchSceneRef, {}>(({}, ref) => {
+const SearchScene = () => {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const { t } = useTranslation();
 
@@ -106,16 +88,14 @@ const SearchScene = forwardRef<SearchSceneRef, {}>(({}, ref) => {
   const page = useCurrentPage();
   const dispatch = useStoreDispatch();
 
-  const showScrollToTop = size(records) >= THRESHOLDS.SCROLL_TO_TOP;
-
-  const filterOutMediaTypes = (mediaTypes: string[], data: any) =>
-    chain(data)
-      .reject((item) => includes(mediaTypes, item.media_type))
-      .value();
+  const showScrollToTop = records.length >= THRESHOLDS.SCROLL_TO_TOP;
 
   const { isLoading } = useSearchHandler(
     (data) => {
-      const filteredResults = filterOutMediaTypes(["person"], data.results);
+      // People results have no detail view in the app; keep movies and series.
+      const filteredResults = (data.results ?? []).filter(
+        (item): item is SearchMediaItem => item.media_type !== "person"
+      );
 
       dispatch(setSearchRecords(filteredResults));
       dispatch(setCurrentPage(data.page));
@@ -126,54 +106,15 @@ const SearchScene = forwardRef<SearchSceneRef, {}>(({}, ref) => {
     }
   );
 
-  const handleOpenModal = (recordSelected: any) => {
-    dispatch(setSelectedRecord(recordSelected));
-    onOpen();
-  };
+  const handleOpenModal = useCallback(
+    (recordSelected: SearchMediaItem) => {
+      dispatch(setSelectedRecord(recordSelected));
+      onOpen();
+    },
+    [dispatch, onOpen]
+  );
 
   const handleSelectTerm = (term: string) => dispatch(setSearchQuery(term));
-
-  // Imperative methods
-  const performSearch = (query: string) => {
-    dispatch(setSearchQuery(query));
-  };
-
-  const clearSearch = () => {
-    dispatch(setSearchRecords([]));
-    dispatch(setCurrentPage(1));
-    dispatch(setTotalRecords(0));
-  };
-
-  const openModal = (recordSelected: any) => {
-    dispatch(setSelectedRecord(recordSelected));
-    onOpen();
-  };
-
-  const closeModal = () => {
-    onClose();
-  };
-
-  const getSearchResults = () => records;
-  const getCurrentPage = () => page;
-  const getTotalPages = () => totalRecords;
-  const isModalOpen = () => isOpen;
-  const isLoadingState = () => isLoading;
-
-  useImperativeHandle(
-    ref,
-    () => ({
-      performSearch,
-      clearSearch,
-      openModal,
-      closeModal,
-      getSearchResults,
-      getCurrentPage,
-      getTotalPages,
-      isModalOpen,
-      isLoading: isLoadingState,
-    }),
-    [records, page, totalRecords, isOpen, isLoading, dispatch]
-  );
 
   return (
     <Fragment>
@@ -200,15 +141,13 @@ const SearchScene = forwardRef<SearchSceneRef, {}>(({}, ref) => {
           size="full"
           isOpen={isOpen}
           onClose={onClose}
-          bodyContent={
-            <ModalContent mediaType={record["media_type"]} record={record} />
-          }
-          children={null}
+          // Series sections embed portaled dropdowns; see SeriesScene.
+          isDismissable={record.media_type !== "tv"}
+          bodyContent={<ModalContent record={record} />}
         />
       ) : null}
     </Fragment>
   );
-});
+};
 
-SearchScene.displayName = "SearchScene";
 export default SearchScene;

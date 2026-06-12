@@ -1,28 +1,28 @@
-import { useMutation, UseMutationResult } from "@tanstack/react-query";
+import {
+  useMutation,
+  UseMutationOptions,
+  UseMutationResult,
+} from "@tanstack/react-query";
 
-import { SerieService } from "../../packages/services";
+import { AppRuntime } from "../../packages/runtime";
+import { SerieService, ChapterLookup } from "../../packages/services";
+import { SeasonChapters } from "../types";
 
-const { getChapterBySeasonId } = SerieService;
-
-type Props = {
-  serieId: number;
-  seasonId: number;
-};
+type Options = Omit<
+  UseMutationOptions<SeasonChapters, Error, ChapterLookup>,
+  "mutationKey" | "mutationFn"
+>;
 
 const useGetChapterBySeasonId = (
-  values: any
-): UseMutationResult<
-  ReturnType<typeof getChapterBySeasonId>,
-  unknown,
-  Props
-> => {
-  return useMutation({
+  options: Options = {}
+): UseMutationResult<SeasonChapters, Error, ChapterLookup> =>
+  useMutation({
     mutationKey: ["UseGetChapterBySeasonId"],
-    mutationFn: async ({ serieId, seasonId }) => {
-      return getChapterBySeasonId({ serieId, seasonId });
-    },
-    ...values,
+    mutationFn: ({ serieId, seasonId }) =>
+      AppRuntime.runPromise(
+        SerieService.getChapterBySeasonId({ serieId, seasonId })
+      ) as Promise<SeasonChapters>,
+    ...options,
   });
-};
 
 export default useGetChapterBySeasonId;

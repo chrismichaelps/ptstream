@@ -1,29 +1,33 @@
 import { Effect } from "effect";
 
+// Domain types shared with the renderer. The store is app-level state, so it
+// is allowed to depend on the app's domain model (and nothing else from src).
+import { Scene, SearchMediaItem, UniqueSerieSeason } from "../../src/types";
+
 // Store action types
-export interface StoreAction<T = any> {
+export interface StoreAction<T = unknown> {
   type: string;
   payload?: T;
-  meta?: Record<string, any>;
+  meta?: Record<string, unknown>;
 }
 
 // Store state interface
 export interface StoreState {
   app: {
-    currentScene: string;
+    currentScene: Scene;
     selectedGenre: number | null;
   };
   search: {
-    records: any[];
+    records: ReadonlyArray<SearchMediaItem>;
     totalRecords: number;
     page: number;
-    record: any | null;
+    record: SearchMediaItem | null;
   };
   inputSearch: {
     query: string;
   };
   season: {
-    seasonSelected: any | null;
+    seasonSelected: UniqueSerieSeason | null;
   };
 }
 
@@ -32,7 +36,8 @@ export interface StoreMiddleware {
   name: string;
   execute: <A, E>(
     action: StoreAction,
-    next: () => Effect.Effect<A, E, never>
+    next: () => Effect.Effect<A, E, never>,
+    getState: () => StoreState
   ) => Effect.Effect<A, E, never>;
 }
 

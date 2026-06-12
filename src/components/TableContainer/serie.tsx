@@ -1,23 +1,24 @@
-import { forwardRef } from "react";
+import { ReactNode } from "react";
+
 import { SerieResult, UniqueSerie } from "../../types";
-import { SerieTableContainer } from "./BaseTableContainer";
-import { BaseTableContainerRef } from "./BaseTableContainer";
+import { BaseTableContainer } from "./BaseTableContainer";
 
 type TableContainerProps = {
-  rows: SerieResult;
-  totalRecords: number;
+  rows?: SerieResult;
+  totalRecords?: number;
   page: number;
   handleOpenModal: (recordSelected: UniqueSerie) => void;
   watchPage: (page: number) => void;
-  emptyContentLabel: JSX.Element;
+  emptyContentLabel: ReactNode;
   isLoading?: boolean;
 };
 
-export const TableContainer = forwardRef<
-  BaseTableContainerRef,
-  TableContainerProps
->((props, ref) => {
-  return <SerieTableContainer ref={ref} {...props} />;
-});
-
-TableContainer.displayName = "SerieTableContainer";
+export const TableContainer = ({
+  handleOpenModal,
+  ...props
+}: TableContainerProps) => (
+  <BaseTableContainer
+    {...props}
+    handleOpenModal={(record) => handleOpenModal(record as UniqueSerie)}
+  />
+);

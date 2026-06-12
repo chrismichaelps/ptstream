@@ -1,12 +1,12 @@
 import { Schema } from "effect";
-import { ComponentType, SVGProps } from "react";
+import { ComponentType, ReactNode, SVGProps } from "react";
 
 export type IconSvgProps = SVGProps<SVGSVGElement> & {
   size?: number;
 };
 
 export type SceneProps = {
-  component?: JSX.Element;
+  component?: ReactNode;
   icon?: ComponentType<SVGProps<SVGSVGElement>>;
 };
 
@@ -14,7 +14,7 @@ export type Scene = "series" | "movies";
 
 export type MediaType = "movie" | "tv";
 
-const MovieFilterSchema = Schema.Struct({
+export const MovieFilterSchema = Schema.Struct({
   page: Schema.Number,
   sort_by: Schema.optional(Schema.String),
   with_original_language: Schema.optional(Schema.String),
@@ -24,7 +24,7 @@ const MovieFilterSchema = Schema.Struct({
   api_key: Schema.optional(Schema.String),
 });
 
-const SerieFilterSchema = Schema.Struct({
+export const SerieFilterSchema = Schema.Struct({
   sort_by: Schema.optional(Schema.String),
   api_key: Schema.optional(Schema.String),
   with_original_language: Schema.optional(Schema.String),
@@ -35,7 +35,7 @@ const SerieFilterSchema = Schema.Struct({
   include_video: Schema.optional(Schema.Boolean),
 });
 
-const PromoResultSchema = Schema.Struct({
+export const PromoResultSchema = Schema.Struct({
   iso_639_1: Schema.String,
   iso_3166_1: Schema.String,
   name: Schema.String,
@@ -45,7 +45,7 @@ const PromoResultSchema = Schema.Struct({
   type: Schema.String,
   official: Schema.Boolean,
   published_at: Schema.String,
-  id: Schema.String
+  id: Schema.String,
 });
 
 export const MovieResultsEntitySchema = Schema.Struct({
@@ -179,19 +179,21 @@ export const SerieSeasonsResultsEntitySchema = Schema.Struct({
   vote_count: Schema.Number,
 });
 
-const MovieSchema = Schema.Struct({
+export const MovieSchema = Schema.Struct({
   page: Schema.Number,
   results: Schema.optional(Schema.Array(MovieResultsEntitySchema)),
   total_pages: Schema.Number,
   total_results: Schema.Number,
 });
-const SerieSchema = Schema.Struct({
+
+export const SerieSchema = Schema.Struct({
   page: Schema.Number,
   results: Schema.optional(Schema.Array(SerieResultsEntitySchema)),
   total_pages: Schema.Number,
   total_results: Schema.Number,
 });
-const PromoSchema = Schema.Struct({
+
+export const PromoSchema = Schema.Struct({
   page: Schema.Number,
   results: Schema.optional(Schema.Array(PromoResultSchema)),
 });
@@ -200,21 +202,54 @@ export type MovieReturnType = Schema.Schema.Type<typeof MovieSchema>;
 export type SerieReturnType = Schema.Schema.Type<typeof SerieSchema>;
 export type PromoReturnType = Schema.Schema.Type<typeof PromoSchema>;
 
-export type MovieResult = Schema.Schema.Type<typeof MovieSchema.fields.results>;
-export type SerieResult = Schema.Schema.Type<typeof SerieSchema.fields.results>;
-export type SerieSeasonsResult = Schema.Schema.Type<typeof SerieSeasonsResultsEntitySchema>;
-export type Seasons = Schema.Schema.Type<typeof SerieSeasonsResultsEntitySchema.fields.seasons>;
-export type PromoResult = Schema.Schema.Type<typeof PromoSchema.fields.results>;
+export type UniqueMovie = Schema.Schema.Type<typeof MovieResultsEntitySchema>;
+export type UniqueSerie = Schema.Schema.Type<typeof SerieResultsEntitySchema>;
+export type UniquePromo = Schema.Schema.Type<typeof PromoResultSchema>;
+
+export type MovieResult = ReadonlyArray<UniqueMovie>;
+export type SerieResult = ReadonlyArray<UniqueSerie>;
+export type PromoResult = ReadonlyArray<UniquePromo>;
+
+export type SerieSeasonsResult = Schema.Schema.Type<
+  typeof SerieSeasonsResultsEntitySchema
+>;
+export type Seasons = SerieSeasonsResult["seasons"];
+export type UniqueSerieSeason = Seasons[number];
+
+/** A single episode of a season, as returned by the TMDB season-details endpoint. */
+export type SeasonEpisode = {
+  readonly id: number;
+  readonly name: string;
+  readonly overview: string;
+  readonly air_date: string;
+  readonly episode_number: number;
+  readonly runtime?: number;
+  readonly season_number: number;
+  readonly still_path: string | null;
+  readonly vote_average: number;
+  readonly vote_count: number;
+};
+
+/** Payload of the TMDB season-details endpoint (subset the app consumes). */
+export type SeasonChapters = {
+  readonly id?: number;
+  readonly name?: string;
+  readonly episodes?: ReadonlyArray<SeasonEpisode>;
+};
+
+/** A search result can be a movie or a serie, discriminated by `media_type`. */
+export type SearchMediaItem = (UniqueMovie | UniqueSerie) & {
+  readonly media_type: MediaType;
+};
+
+/** Shape persisted by the favorites local storage. */
+export type FavoriteItem = SearchMediaItem & {
+  readonly likedAt: string;
+};
 
 export type MovieFilter = Schema.Schema.Type<typeof MovieFilterSchema>;
 export type SerieFilter = Schema.Schema.Type<typeof SerieFilterSchema>;
 
-export type UniqueMovie = MovieResult[0];
-export type UniqueSerie = SerieResult[0];
-export type UniqueSerieSeason = Seasons[0];
-export type UniquePromo = PromoResult[0];
-
 export type HttpClientConfig = {
   baseUrl: string;
 };
-

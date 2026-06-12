@@ -1,76 +1,87 @@
-import { some, filter, orderBy, uniqBy } from 'lodash';
-import { Effect } from 'effect';
-import { StorageService } from '../../packages/services';
+import { Effect } from "effect";
 
-const STORAGE_CHAPTERS_WATCHED_KEY = 'chapters-watched';
+import { StorageService } from "../../packages/services";
+import { STORAGE_KEYS } from "../../packages/constants";
+
+export type ChapterRef = {
+  readonly serieId: number;
+  readonly seasonId: number;
+  readonly episodeId: number;
+};
+
+type WatchedChapter = {
+  readonly key: string;
+  readonly watchedAt: string;
+};
 
 // Helper function to create a string key for a chapter
-const generateChapterKey = (item: { serieId: number; seasonId: number; episodeId: number }) => {
-  return `${item.serieId}_${item.seasonId}_${item.episodeId}`;
-};
+const generateChapterKey = (item: ChapterRef) =>
+  `${item.serieId}_${item.seasonId}_${item.episodeId}`;
 
 // Retrieve the current list of watched chapters from local storage
-const getChaptersWatchedItems = () => {
-  return Effect.gen(function* () {
+const getChaptersWatchedItems = (): Effect.Effect<
+  ReadonlyArray<WatchedChapter>,
+  never,
+  StorageService
+> =>
+  Effect.gen(function* () {
     const storageService = yield* StorageService;
-    const watchedItems = yield* storageService.getItem(STORAGE_CHAPTERS_WATCHED_KEY);
-    return watchedItems ? JSON.parse(watchedItems) : [];
+    const watchedItems = yield* storageService.getItem(
+      STORAGE_KEYS.CHAPTERS_WATCHED
+    );
+    return watchedItems ? (JSON.parse(watchedItems) as WatchedChapter[]) : [];
   });
-};
 
 // Add a new chapter to the watched list
-const addChapterWatchedItem = (item: { serieId: number; seasonId: number; episodeId: number }) => {
-  return Effect.gen(function* () {
+const addChapterWatchedItem = (item: ChapterRef) =>
+  Effect.gen(function* () {
     const storageService = yield* StorageService;
     const watchedItems = yield* getChaptersWatchedItems();
     const chapterKey = generateChapterKey(item);
 
-    // Use lodash `some` to check if the chapter is already watched
-    if (!some(watchedItems, (watchedItem) => watchedItem.key === chapterKey)) {
-      const updatedItems = uniqBy(
-        [...watchedItems, { key: chapterKey, watchedAt: new Date().toISOString() }],
-        'key'
-      );
-
-      yield* storageService.setItem(STORAGE_CHAPTERS_WATCHED_KEY, JSON.stringify(updatedItems));
+    if (watchedItems.some((watched) => watched.key === chapterKey)) {
+      return;
     }
+
+    const updatedItems = [
+      ...watchedItems,
+      { key: chapterKey, watchedAt: new Date().toISOString() },
+    ];
+
+    yield* storageService.setItem(
+      STORAGE_KEYS.CHAPTERS_WATCHED,
+      JSON.stringify(updatedItems)
+    );
   });
-};
 
 // Remove a chapter from the watched list
-const removeChapterWatchedItem = (item: { serieId: number; seasonId: number; episodeId: number }) => {
-  return Effect.gen(function* () {
+const removeChapterWatchedItem = (item: ChapterRef) =>
+  Effect.gen(function* () {
     const storageService = yield* StorageService;
     const watchedItems = yield* getChaptersWatchedItems();
     const chapterKey = generateChapterKey(item);
 
-    // Use lodash `filter` to remove the chapter by key
-    const updatedItems = filter(watchedItems, (watchedItem) => watchedItem.key !== chapterKey);
+    const updatedItems = watchedItems.filter(
+      (watched) => watched.key !== chapterKey
+    );
 
-    yield* storageService.setItem(STORAGE_CHAPTERS_WATCHED_KEY, JSON.stringify(updatedItems));
+    yield* storageService.setItem(
+      STORAGE_KEYS.CHAPTERS_WATCHED,
+      JSON.stringify(updatedItems)
+    );
   });
-};
 
 // Check if a chapter has been watched
-const wasChapterSeen = (item: { serieId: number; seasonId: number; episodeId: number }) => {
-  return Effect.gen(function* () {
-    const watchedItems = yield* getChaptersWatchedItems();
-    const chapterKey = generateChapterKey(item);
-
-    // Use lodash `some` to check if the chapter exists in the watched list
-    return some(watchedItems, (watchedItem) => watchedItem.key === chapterKey);
-  });
-};
+const wasChapterSeen = (item: ChapterRef) =>
+  Effect.map(getChaptersWatchedItems(), (watchedItems) =>
+    watchedItems.some((watched) => watched.key === generateChapterKey(item))
+  );
 
 // Get all watched chapters, ordered by the watch timestamp (most recent first)
-const getAllChaptersWatchedItems = () => {
-  return Effect.gen(function* () {
-    const watchedItems = yield* getChaptersWatchedItems();
-
-    // Use lodash `orderBy` to sort by watchedAt in descending order
-    return orderBy(watchedItems, ['watchedAt'], ['desc']);
-  });
-};
+const getAllChaptersWatchedItems = () =>
+  Effect.map(getChaptersWatchedItems(), (watchedItems) =>
+    [...watchedItems].sort((a, b) => b.watchedAt.localeCompare(a.watchedAt))
+  );
 
 export {
   addChapterWatchedItem,

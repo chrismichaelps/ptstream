@@ -16,9 +16,24 @@ import {
 } from './config';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
-if (require('electron-squirrel-startup')) {
+import squirrelStartup from 'electron-squirrel-startup';
+
+if (squirrelStartup) {
   app.quit();
 }
+
+// Automatic updates from GitHub Releases via update.electronjs.org.
+// No-ops in development and on platforms without Squirrel support (Linux).
+import { updateElectronApp, UpdateSourceType } from 'update-electron-app';
+
+updateElectronApp({
+  updateSource: {
+    type: UpdateSourceType.ElectronPublicUpdateService,
+    repo: 'chrismichaelps/ptstream',
+  },
+  updateInterval: '1 hour',
+  logger: console,
+});
 
 const createWindow = () => {
   // Create the browser window.
@@ -63,7 +78,7 @@ const createWindow = () => {
       console.log('Popup blocked:', url);
       console.log('Allowed domains:', getAllowedDomains());
       return { action: SECURITY_ACTIONS.DENY };
-    } catch (error) {
+    } catch {
       console.log('Invalid URL blocked:', url);
       return { action: SECURITY_ACTIONS.DENY };
     }

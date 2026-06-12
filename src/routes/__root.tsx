@@ -1,9 +1,8 @@
-import { createRootRoute, Outlet, useRouter, useLocation } from '@tanstack/react-router';
+import { createRootRoute, Outlet, useLocation } from '@tanstack/react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { NextUIProvider, Switch } from '@nextui-org/react';
 import { ThemeProvider as NextThemesProvider, useTheme } from 'next-themes';
 import { I18nextProvider } from 'react-i18next';
-import { EffectProvider } from '../contexts/EffectContext';
 import { StoreProvider, useCurrentScene, useSelectedGenre, useStoreDispatch, setScene, setGenre, resetGenre } from '../../packages/store';
 import NavBar from '../components/NavBar';
 import Footer from '../components/Footer';
@@ -31,7 +30,6 @@ const scenes: Record<Scene, SceneConfig> = {
 
 function RootComponent() {
   const { resolvedTheme } = useTheme();
-  const router = useRouter();
   const location = useLocation();
   const dispatch = useStoreDispatch();
 
@@ -99,20 +97,18 @@ function RootComponent() {
 
 export const Route = createRootRoute({
   component: () => (
-    <EffectProvider>
-      <StoreProvider>
-        <NextUIProvider>
-          <QueryClientProvider client={queryClient}>
-            <NextThemesProvider attribute="class" defaultTheme="light">
-              <I18nextProvider i18n={i18n}>
-                <div className="px-2 mx-1 sm:mx-2 lg:mx-4">
-                  <RootComponent />
-                </div>
-              </I18nextProvider>
-            </NextThemesProvider>
-          </QueryClientProvider>
-        </NextUIProvider>
-      </StoreProvider>
-    </EffectProvider>
+    <StoreProvider>
+      <NextUIProvider>
+        <QueryClientProvider client={queryClient}>
+          <NextThemesProvider attribute="class" defaultTheme="light">
+            <I18nextProvider i18n={i18n}>
+              <div className="px-2 mx-1 sm:mx-2 lg:mx-4">
+                <RootComponent />
+              </div>
+            </I18nextProvider>
+          </NextThemesProvider>
+        </QueryClientProvider>
+      </NextUIProvider>
+    </StoreProvider>
   ),
 });

@@ -1,0 +1,81 @@
+name: Release
+
+# Build and publish a GitHub Release whenever changes land on main.
+# The Electron Forge GitHub publisher creates (or appends artifacts to) the
+# release tagged v<package.json version>. Running apps pick the release up
+# automatically through update.electronjs.org (see src/main.ts).
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: {}
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  # Skip the expensive build matrix when the version already has a release.
+  check-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      should-release: ${{ steps.version.outputs.should-release }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read package version and check for existing release
+        id: version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          if gh release view "v$VERSION" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            echo "Release v$VERSION already exists — skipping publish."
+            echo "should-release=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "should-release=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  publish:
+    needs: check-version
+    if: needs.check-version.outputs.should-release == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest # arm64 .zip (Squirrel.Mac via update.electronjs.org)
+          - os: windows-latest # Squirrel.Windows installer + RELEASES manifest
+          - os: ubuntu-latest # .deb / .rpm (manual install; no auto-update on Linux)
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.1.3
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install Linux packaging tools
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y rpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Type check
+        run: pnpm exec tsc --noEmit
+
+      - name: Publish release artifacts
+        run: pnpm exec electron-forge publish
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

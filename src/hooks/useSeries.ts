@@ -1,22 +1,28 @@
-import { useMutation, UseMutationResult } from "@tanstack/react-query";
+import {
+  useMutation,
+  UseMutationOptions,
+  UseMutationResult,
+} from "@tanstack/react-query";
 
-import { SerieService } from "../../packages/services";
-import { SerieFilter } from "../types";
+import { AppRuntime } from "../../packages/runtime";
+import { SerieService, DiscoverSeriesFilter } from "../../packages/services";
+import { SerieReturnType } from "../types";
 
-const { all } = SerieService;
-
-type Props = SerieFilter & { with_genres?: number };
+type Options = Omit<
+  UseMutationOptions<SerieReturnType, Error, DiscoverSeriesFilter>,
+  "mutationKey" | "mutationFn"
+>;
 
 const useSeries = (
-  values: any
-): UseMutationResult<ReturnType<typeof all>, unknown, Props> => {
-  return useMutation({
+  options: Options = {}
+): UseMutationResult<SerieReturnType, Error, DiscoverSeriesFilter> =>
+  useMutation({
     mutationKey: ["UseAllSeries"],
-    mutationFn: async ({ page, with_genres }) => {
-      return all({ page, with_genres });
-    },
-    ...values,
+    mutationFn: ({ page, with_genres }) =>
+      AppRuntime.runPromise(
+        SerieService.discover({ page, with_genres })
+      ) as Promise<SerieReturnType>,
+    ...options,
   });
-};
 
 export default useSeries;

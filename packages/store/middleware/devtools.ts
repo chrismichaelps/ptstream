@@ -1,15 +1,26 @@
 import { Effect } from "effect";
+
 import { StoreMiddleware } from "../types";
+
+type DevToolsWindow = Window & {
+  __REDUX_DEVTOOLS_EXTENSION__?: {
+    send: (action: unknown, state: unknown) => void;
+  };
+};
 
 export const createDevToolsMiddleware = (): StoreMiddleware => ({
   name: "devtools",
-  execute: (action, next) =>
+  execute: (action, next, getState) =>
     Effect.gen(function* () {
-      // Send action to DevTools if available
-      if (typeof window !== "undefined" && (window as any).__REDUX_DEVTOOLS_EXTENSION__) {
-        (window as any).__REDUX_DEVTOOLS_EXTENSION__.send(action, {});
+      const result = yield* next();
+
+      if (typeof window !== "undefined") {
+        (window as DevToolsWindow).__REDUX_DEVTOOLS_EXTENSION__?.send(
+          action,
+          getState()
+        );
       }
 
-      return yield* next();
-    })
+      return result;
+    }),
 });

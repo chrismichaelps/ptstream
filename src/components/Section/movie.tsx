@@ -1,4 +1,4 @@
-import { useEffect, useState, useImperativeHandle, forwardRef } from "react";
+import { useEffect, useState } from "react";
 import { Badge, Button, Image, Spinner } from "@nextui-org/react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -11,11 +11,10 @@ import {
   Minimize2,
   Maximize2,
 } from "lucide-react";
-import { join, map, merge, range, toUpper } from "lodash";
 import { useTranslation } from "react-i18next";
 import qs from "qs";
 
-import { PromoResult, PromoReturnType, UniqueMovie } from "../../types";
+import { PromoResult, UniqueMovie } from "../../types";
 import { parseDate } from "../../toolkit/serie";
 import Banner from "../Banner";
 import useGetPromoById from "../../hooks/useGetPromoById";
@@ -39,8 +38,10 @@ type StreamingVideoProps = {
   onBack: () => void;
 };
 
-const renderStars = (rating: number) => {
-  return map(range(1, 5), (i) => (
+const STAR_RATINGS = [1, 2, 3, 4] as const;
+
+const renderStars = (rating: number) =>
+  STAR_RATINGS.map((i) => (
     <Star
       key={i}
       className={`w-5 h-5 ${
@@ -50,21 +51,14 @@ const renderStars = (rating: number) => {
       }`}
     />
   ));
-};
 
 const StreamingVideo = ({ movie: { id }, onBack }: StreamingVideoProps) => {
   const [isLoading, setIsLoading] = useState(true);
-  const [isFloating] = useState(true);
 
   const { toggleFullscreen, isFullscreen } = useFullscreen();
 
-  const onLoad = () => setIsLoading(false);
-  // const src = `https://vidsrc.pro/embed/movie/${id}`;
-  const query = {
-    ds_lang: "es",
-  };
-  const queryString = qs.stringify(query);
-  const src = `https://vidsrc.xyz/embed/movie/${id}?${queryString}`;
+  const queryString = qs.stringify({ ds_lang: "es" });
+  const src = `https://vidsrcme.ru/embed/movie/${id}?${queryString}`;
 
   return (
     <div className="fixed inset-0 text-black bg-gradient-to-br from-black to-gray-900 dark:text-white">
@@ -93,17 +87,13 @@ const StreamingVideo = ({ movie: { id }, onBack }: StreamingVideoProps) => {
         </div>
       )}
 
-      <div
-        className={`relative w-full h-full ${
-          isFloating ? "animate-iframe-drop-effect" : ""
-        }`}
-      >
+      <div className="relative w-full h-full animate-iframe-drop-effect">
         <iframe
           src={src}
           className="absolute top-0 left-0 w-full h-full"
           allow="autoplay; fullscreen"
           allowFullScreen
-          onLoad={onLoad}
+          onLoad={() => setIsLoading(false)}
         />
       </div>
     </div>
@@ -117,10 +107,8 @@ const DefaultState = ({
 }: DefaultStateProps) => {
   const { t } = useTranslation();
 
-  const genreKeywords = join(
-    map(movie.genre_ids, (genreId) => t(`${genreId}`)),
-    ", "
-  );
+  const genreIds = movie.genre_ids ?? [];
+  const genreKeywords = genreIds.map((genreId) => t(`${genreId}`)).join(", ");
 
   return (
     <div className="overflow-y-auto max-h-screen text-black dark:text-white">
@@ -160,7 +148,7 @@ const DefaultState = ({
               </div>
             )}
             <div className="flex flex-wrap gap-2">
-              {map(movie.genre_ids, (genreId) => (
+              {genreIds.map((genreId) => (
                 <Badge
                   key={genreId}
                   className="text-black bg-gray-200 dark:bg-gray-700 dark:text-white"
@@ -172,28 +160,28 @@ const DefaultState = ({
             <div className="flex items-center space-x-4">
               <div className="flex items-center">
                 {renderStars(movie.vote_average)}
-                {movie.vote_average && (
+                {movie.vote_average ? (
                   <span className="ml-2">{movie.vote_average.toFixed(1)}</span>
-                )}
+                ) : null}
               </div>
-              {movie.vote_count && (
+              {movie.vote_count ? (
                 <span className="text-gray-700 dark:text-gray-300">
                   ({movie.vote_count.toLocaleString()}{" "}
                   {t("Movie_DefaultState_Votes")})
                 </span>
-              )}
+              ) : null}
             </div>
             <div className="flex flex-col gap-4 sm:flex-row">
               <Button
                 className="bg-primary text-primary-foreground hover:bg-primary/90"
-                onClick={onWatchNow}
+                onPress={onWatchNow}
               >
                 <PlayCircle className="mr-2 w-4 h-4" />
                 {t("Movie_ChapterState_WatchNow")}
               </Button>
               <Button
                 className="bg-primary text-primary-foreground hover:bg-primary/90"
-                onClick={onWatchPromo}
+                onPress={onWatchPromo}
               >
                 <PlayCircle className="mr-2 w-4 h-4" />
                 {t("Movie_DefaultState_WatchPromo")}
@@ -211,16 +199,16 @@ const DefaultState = ({
                 <div className="flex items-center">
                   <Globe className="mr-2 w-4 h-4" />
                   {t("Movie_DefaultState_Language")}:{" "}
-                  {toUpper(movie.original_language)}
+                  {movie.original_language.toUpperCase()}
                 </div>
               )}
-              {movie.popularity && (
+              {movie.popularity ? (
                 <div className="flex items-center">
                   <ThumbsUp className="mr-2 w-4 h-4" />
                   {t("Movie_DefaultState_Popularity")}:{" "}
                   {movie.popularity.toFixed(2)}
                 </div>
-              )}
+              ) : null}
               {movie.adult && (
                 <div className="flex items-center">
                   <Badge>{t("AdultContent")}</Badge>
@@ -234,127 +222,67 @@ const DefaultState = ({
   );
 };
 
-export interface MovieSectionRef {
-  startWatching: () => void;
-  stopWatching: () => void;
-  watchPromo: () => void;
-  closePromo: () => void;
-  isWatching: () => boolean;
-  isPromoOpen: () => boolean;
-  getMovieInfo: () => UniqueMovie;
-  refreshPromo: () => void;
-}
+export const Section = ({ item }: MovieSectionProps) => {
+  const [watchNow, setWatchNow] = useState(false);
+  const [watchPromo, setWatchPromo] = useState(false);
+  const [promo, setPromo] = useState<PromoResult>([]);
+  const movie = item;
 
-export const Section = forwardRef<MovieSectionRef, MovieSectionProps>(
-  ({ item }, ref) => {
-    const [watchNow, setWatchNow] = useState(false);
-    const [watchPromo, setWatchPromo] = useState(false);
-    const [promo, setPromo] = useState<PromoResult>();
-    const movie = item;
+  const { mutate: mutatePromo } = useGetPromoById({
+    onSuccess: (data) => {
+      setPromo(data.results ?? []);
+    },
+    onError: (error: Error) => {
+      console.error("Error fetching promo by movie id:", error);
+    },
+  });
 
-    const handleBack = () => {
-      setWatchNow(false);
-    };
+  // get promo for a particular movie
+  useEffect(() => {
+    if (movie.id) {
+      mutatePromo({ id: `movie/${movie.id}` });
+    }
+  }, [movie.id, mutatePromo]);
 
-    const { mutate: mutatePromo } = useGetPromoById({
-      onSuccess: (data: PromoReturnType) => {
-        setPromo(data.results);
-      },
-      onError: (error: Error) => {
-        console.error("Error fetching promo by movie id:", error);
-      },
-    });
+  return (
+    <div className="relative">
+      {watchPromo ? (
+        <PlyrVideoPlayer
+          promo={promo}
+          onClosePlayer={() => setWatchPromo(false)}
+        />
+      ) : null}
 
-    // get promo for a particular movie
-    useEffect(() => {
-      if (movie.id) {
-        mutatePromo({ id: `movie/${movie.id}` });
-      }
-    }, [movie.id]);
-
-    // Imperative methods
-    const startWatching = () => {
-      setWatchNow(true);
-    };
-
-    const stopWatching = () => {
-      setWatchNow(false);
-    };
-
-    const openPromo = () => {
-      setWatchPromo(true);
-    };
-
-    const closePromo = () => {
-      setWatchPromo(false);
-    };
-
-    const isWatching = () => watchNow;
-    const isPromoOpen = () => watchPromo;
-    const getMovieInfo = () => movie;
-    const refreshPromo = () => {
-      if (movie.id) {
-        mutatePromo({ id: `movie/${movie.id}` });
-      }
-    };
-
-    useImperativeHandle(
-      ref,
-      () => ({
-        startWatching,
-        stopWatching,
-        watchPromo: openPromo,
-        closePromo,
-        isWatching,
-        isPromoOpen,
-        getMovieInfo,
-        refreshPromo,
-      }),
-      [watchNow, watchPromo, movie, mutatePromo]
-    );
-
-    return (
-      <div className="relative">
-        {watchPromo ? (
-          <PlyrVideoPlayer
-            promo={promo}
-            onClosePlayer={() => setWatchPromo(false)}
-          />
-        ) : null}
-
-        <AnimatePresence>
-          {watchNow ? (
-            <motion.div
-              key="streaming"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-            >
-              <StreamingVideo movie={movie} onBack={handleBack} />
-            </motion.div>
-          ) : (
-            <motion.div
-              key="default"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-            >
-              <DefaultState
-                movie={movie}
-                onWatchNow={() => setWatchNow(true)}
-                onWatchPromo={() => setWatchPromo(true)}
-              />
-            </motion.div>
-          )}
-          {!!watchNow ? null : (
-            <FavoriteButton item={merge(item, { media_type: "movie" })} />
-          )}
-        </AnimatePresence>
-      </div>
-    );
-  }
-);
-
-Section.displayName = "MovieSection";
+      <AnimatePresence>
+        {watchNow ? (
+          <motion.div
+            key="streaming"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.3 }}
+          >
+            <StreamingVideo movie={movie} onBack={() => setWatchNow(false)} />
+          </motion.div>
+        ) : (
+          <motion.div
+            key="default"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.3 }}
+          >
+            <DefaultState
+              movie={movie}
+              onWatchNow={() => setWatchNow(true)}
+              onWatchPromo={() => setWatchPromo(true)}
+            />
+          </motion.div>
+        )}
+        {watchNow ? null : (
+          <FavoriteButton item={{ ...item, media_type: "movie" }} />
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};

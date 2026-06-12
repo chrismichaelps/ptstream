@@ -1,7 +1,8 @@
+import { Scene, SearchMediaItem, UniqueSerieSeason } from "../../../src/types";
 import { StoreAction } from "../types";
 
 // App actions
-export const setScene = (scene: string): StoreAction<string> => ({
+export const setScene = (scene: Scene): StoreAction<Scene> => ({
   type: "SET_SCENE",
   payload: scene,
 });
@@ -16,7 +17,9 @@ export const resetGenre = (): StoreAction => ({
 });
 
 // Search actions
-export const setSearchRecords = (records: any[]): StoreAction<any[]> => ({
+export const setSearchRecords = (
+  records: ReadonlyArray<SearchMediaItem>
+): StoreAction<ReadonlyArray<SearchMediaItem>> => ({
   type: "SET_SEARCH_RECORDS",
   payload: records,
 });
@@ -31,7 +34,9 @@ export const setCurrentPage = (page: number): StoreAction<number> => ({
   payload: page,
 });
 
-export const setSelectedRecord = (record: any | null): StoreAction<any | null> => ({
+export const setSelectedRecord = (
+  record: SearchMediaItem | null
+): StoreAction<SearchMediaItem | null> => ({
   type: "SET_SELECTED_RECORD",
   payload: record,
 });
@@ -51,7 +56,9 @@ export const clearSearchQuery = (): StoreAction => ({
 });
 
 // Season actions
-export const setSeasonSelected = (season: any | null): StoreAction<any | null> => ({
+export const setSeasonSelected = (
+  season: UniqueSerieSeason
+): StoreAction<UniqueSerieSeason> => ({
   type: "SET_SEASON_SELECTED",
   payload: season,
 });
