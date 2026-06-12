@@ -1,8 +1,8 @@
 allowBuilds:
-  '@parcel/watcher': set this to true or false
-  core-js: set this to true or false
-  electron: set this to true or false
-  electron-winstaller: set this to true or false
-  esbuild: set this to true or false
-  msgpackr-extract: set this to true or false
+  '@parcel/watcher': true
+  core-js: true
+  electron: true
+  electron-winstaller: true
+  esbuild: true
+  msgpackr-extract: true
 blockExoticSubdeps: false
