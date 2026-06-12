@@ -5,4 +5,10 @@ allowBuilds:
   electron-winstaller: true
   esbuild: true
   msgpackr-extract: true
+  lzma-native: true
+  macos-alias: true
+  fs-xattr: true
 blockExoticSubdeps: false
+enablePrePostScripts: true
+nodeLinker: hoisted
+shamefullyHoist: true
