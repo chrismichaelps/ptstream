@@ -56,6 +56,13 @@ const config: ForgeConfig = {
     // at package time, before code signing the application
     new FusesPlugin({
       version: FuseVersion.V1,
+      // Flipping fuses rewrites the Electron binary, which invalidates the
+      // ad-hoc signature it ships with. On Apple Silicon an unsigned/broken
+      // signature + quarantine flag triggers the misleading
+      // "ptstream is damaged and can't be opened" Gatekeeper error.
+      // Re-apply an ad-hoc signature here so the packaged .app stays valid.
+      // (Free, no Apple Developer ID — users still right-click > Open once.)
+      resetAdHocDarwinSignature: true,
       [FuseV1Options.RunAsNode]: false,
       [FuseV1Options.EnableCookieEncryption]: true,
       [FuseV1Options.EnableNodeOptionsEnvironmentVariable]: false,
