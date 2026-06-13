@@ -25,6 +25,7 @@
   "exclude": [
     "node_modules",
     ".vite",
-    "dist"
+    "dist",
+    "forge.config.ts"
   ]
 }

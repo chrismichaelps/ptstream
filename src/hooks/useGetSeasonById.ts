@@ -1,19 +1,28 @@
-import { useMutation, UseMutationResult } from "@tanstack/react-query";
+import {
+  useMutation,
+  UseMutationOptions,
+  UseMutationResult,
+} from "@tanstack/react-query";
 
+import { AppRuntime } from "../../packages/runtime";
 import { SerieService } from "../../packages/services";
+import { SerieSeasonsResult } from "../types";
 
-const { getSeasonById } = SerieService;
+type Options = Omit<
+  UseMutationOptions<SerieSeasonsResult, Error, number>,
+  "mutationKey" | "mutationFn"
+>;
 
 const useGetSeasonById = (
-  values: any
-): UseMutationResult<ReturnType<typeof getSeasonById>, unknown, number> => {
-  return useMutation({
+  options: Options = {}
+): UseMutationResult<SerieSeasonsResult, Error, number> =>
+  useMutation({
     mutationKey: ["UseGetSeasonById"],
-    mutationFn: async (id) => {
-      return getSeasonById(id);
-    },
-    ...values,
+    mutationFn: (id) =>
+      AppRuntime.runPromise(
+        SerieService.getSeasonById(id)
+      ) as Promise<SerieSeasonsResult>,
+    ...options,
   });
-};
 
 export default useGetSeasonById;

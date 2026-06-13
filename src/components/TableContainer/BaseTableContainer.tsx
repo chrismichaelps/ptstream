@@ -1,84 +1,42 @@
-import {
-  useCallback,
-  useEffect,
-  memo,
-  useMemo,
-  useImperativeHandle,
-  forwardRef,
-} from "react";
+import { memo, ReactNode, useEffect } from "react";
 import { Spinner, Image } from "@nextui-org/react";
-import { map, size, throttle, truncate } from "lodash";
+import { throttle, truncate } from "lodash";
 
 import { UniqueMovie, UniqueSerie } from "../../types";
 
 const SCROLL_DELAY = 500; // Throttle delay in ms
+// Start fetching the next page this many pixels before the real bottom so
+// the user never hits a hard stop while scrolling.
+const PREFETCH_THRESHOLD_PX = 800;
 
 // Universal media item type
-type UniversalMediaItem = UniqueMovie | UniqueSerie;
+export type UniversalMediaItem = UniqueMovie | UniqueSerie;
 
 // Type guard functions
-const isMovie = (item: UniversalMediaItem): item is UniqueMovie => {
-  return "title" in item && "release_date" in item;
-};
+const isMovie = (item: UniversalMediaItem): item is UniqueMovie =>
+  "title" in item;
 
-const isSerie = (item: UniversalMediaItem): item is UniqueSerie => {
-  return "name" in item && "first_air_date" in item;
-};
+// Derive the display title from the item's actual shape so mixed lists
+// (e.g. favorites holding both movies and series) always resolve a title.
+const getTitle = (item: UniversalMediaItem): string =>
+  isMovie(item) ? item.title : item.name ?? "Unknown";
 
-// Media type configuration
-interface MediaTypeConfig {
-  getTitle: (item: UniversalMediaItem) => string;
-  getDate: (item: UniversalMediaItem) => string;
-  getAltText: (item: UniversalMediaItem) => string;
-  getDateLabel: (item: UniversalMediaItem) => string;
-}
-
-const mediaConfigs: Record<string, MediaTypeConfig> = {
-  movie: {
-    getTitle: (item) => (isMovie(item) ? item.title : "Unknown"),
-    getDate: (item) => (isMovie(item) ? item.release_date : ""),
-    getAltText: (item) => (isMovie(item) ? item.title : "Movie"),
-    getDateLabel: () => "Released",
-  },
-  tv: {
-    getTitle: (item) => (isSerie(item) ? item.name : "Unknown"),
-    getDate: (item) => (isSerie(item) ? item.first_air_date : ""),
-    getAltText: (item) => (isSerie(item) ? item.name : "Series"),
-    getDateLabel: () => "First Aired",
-  },
-};
-
-// Base table container props
-interface BaseTableContainerProps {
-  rows: readonly UniversalMediaItem[];
-  totalRecords: number;
+export interface BaseTableContainerProps {
+  rows?: ReadonlyArray<UniversalMediaItem>;
+  totalRecords?: number;
   page: number;
   handleOpenModal: (recordSelected: UniversalMediaItem) => void;
   watchPage: (page: number) => void;
-  emptyContentLabel: JSX.Element;
+  emptyContentLabel: ReactNode;
   isLoading?: boolean;
-  mediaType?: "movie" | "tv";
-  showRatings?: boolean;
-  showDates?: boolean;
-  customCardRenderer?: (item: UniversalMediaItem) => JSX.Element;
 }
 
 // Memoized media card component
 const BaseMediaCard = memo<{
   item: UniversalMediaItem;
   onOpenModal: (item: UniversalMediaItem) => void;
-  mediaType: "movie" | "tv";
-  customRenderer?: (item: UniversalMediaItem) => JSX.Element;
-}>(({ item, onOpenModal, mediaType, customRenderer }) => {
-  const config = mediaConfigs[mediaType];
-
-  // Use custom renderer if provided
-  if (customRenderer) {
-    return customRenderer(item);
-  }
-
-  const title = config.getTitle(item);
-  const altText = config.getAltText(item);
+}>(({ item, onOpenModal }) => {
+  const title = getTitle(item);
 
   return (
     <div
@@ -86,12 +44,13 @@ const BaseMediaCard = memo<{
       onClick={() => onOpenModal(item)}
     >
       <Image
-        alt={altText}
+        alt={title}
         className="object-cover rounded-lg"
         src={`https://image.tmdb.org/t/p/w185${item.poster_path}`}
         fallbackSrc="https://via.placeholder.com/300x300"
         height={120}
         width={80}
+        loading="lazy"
       />
       <div className="flex-1 ml-4">
         <p className="font-semibold text-gray-800 text-md">{title}</p>
@@ -108,195 +67,63 @@ const BaseMediaCard = memo<{
 
 BaseMediaCard.displayName = "BaseMediaCard";
 
-export interface BaseTableContainerRef {
-  scrollToTop: () => void;
-  scrollToBottom: () => void;
-  getCurrentPage: () => number;
-  getTotalPages: () => number;
-  getItemCount: () => number;
-  hasMorePages: () => boolean;
-  loadNextPage: () => void;
-  refreshData: () => void;
-  getVisibleItems: () => UniversalMediaItem[];
-}
+export const BaseTableContainer = ({
+  rows = [],
+  totalRecords = 0,
+  page,
+  handleOpenModal,
+  watchPage,
+  emptyContentLabel,
+  isLoading,
+}: BaseTableContainerProps) => {
+  const hasMore = page < totalRecords;
 
-// Main base table container component
-export const BaseTableContainer = forwardRef<
-  BaseTableContainerRef,
-  BaseTableContainerProps
->(
-  (
-    {
-      rows,
-      totalRecords,
-      page,
-      handleOpenModal,
-      watchPage,
-      emptyContentLabel,
-      isLoading,
-      mediaType = "movie",
-      showRatings = true,
-      showDates = true,
-      customCardRenderer,
-    },
-    ref
-  ) => {
-    const hasMore = page < totalRecords;
+  // Infinite scroll: load the next page when reaching the bottom.
+  useEffect(() => {
+    const handleScroll = throttle(() => {
+      const scrollableHeight = document.documentElement.scrollHeight;
+      const scrolled = window.innerHeight + window.scrollY;
 
-    // Memoized render function
-    const renderMediaCard = useCallback(
-      (item: UniversalMediaItem) => {
-        return (
-          <BaseMediaCard
-            key={item.id}
-            item={item}
-            onOpenModal={handleOpenModal}
-            mediaType={mediaType}
-            customRenderer={customCardRenderer}
-          />
-        );
-      },
-      [handleOpenModal, mediaType, customCardRenderer]
-    );
-
-    // Scroll event listener with throttling
-    useEffect(() => {
-      const handleScroll = throttle(() => {
-        const scrollableHeight = document.documentElement.scrollHeight;
-        const scrolled = window.innerHeight + window.scrollY;
-
-        // Check if near the bottom of the page and if there are more pages to load
-        if (scrolled >= scrollableHeight && hasMore && !isLoading) {
-          watchPage(page + 1);
-        }
-      }, SCROLL_DELAY);
-
-      window.addEventListener("scroll", handleScroll);
-
-      return () => {
-        window.removeEventListener("scroll", handleScroll);
-        handleScroll.cancel(); // Cancel any pending throttled calls
-      };
-    }, [hasMore, isLoading, page, watchPage]);
-
-    // Memoized data state
-    const DataState = useCallback(
-      () => map(rows, renderMediaCard),
-      [rows, renderMediaCard]
-    );
-
-    // Memoized empty state
-    const EmptyState = useCallback(
-      () => (
-        <div className="flex justify-center w-full">{emptyContentLabel}</div>
-      ),
-      [emptyContentLabel]
-    );
-
-    // Memoized loading state
-    const LoadingState = useCallback(
-      () => (
-        <div className="flex items-center justify-center min-h-screen">
-          <Spinner color="default" size="lg" />
-        </div>
-      ),
-      []
-    );
-
-    // Memoized grid classes based on media type
-    const gridClasses = useMemo(() => {
-      const baseClasses = "grid grid-cols-1 gap-4";
-      const responsiveClasses = "sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4";
-      return `${baseClasses} ${responsiveClasses}`;
-    }, []);
-
-    // Imperative methods
-    const scrollToTop = () => {
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    };
-
-    const scrollToBottom = () => {
-      window.scrollTo({
-        top: document.documentElement.scrollHeight,
-        behavior: "smooth",
-      });
-    };
-
-    const getCurrentPage = () => page;
-    const getTotalPages = () => totalRecords;
-    const getItemCount = () => size(rows);
-    const hasMorePages = () => hasMore;
-    const loadNextPage = () => {
-      if (hasMore && !isLoading) {
+      if (
+        scrolled >= scrollableHeight - PREFETCH_THRESHOLD_PX &&
+        hasMore &&
+        !isLoading
+      ) {
         watchPage(page + 1);
       }
-    };
-    const refreshData = () => {
-      // This would need to be handled by the parent component
-      console.log("Refresh data requested");
-    };
-    const getVisibleItems = () => [...rows];
+    }, SCROLL_DELAY);
 
-    useImperativeHandle(
-      ref,
-      () => ({
-        scrollToTop,
-        scrollToBottom,
-        getCurrentPage,
-        getTotalPages,
-        getItemCount,
-        hasMorePages,
-        loadNextPage,
-        refreshData,
-        getVisibleItems,
-      }),
-      [page, totalRecords, hasMore, isLoading, rows, watchPage]
-    );
+    window.addEventListener("scroll", handleScroll);
 
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      handleScroll.cancel(); // Cancel any pending throttled calls
+    };
+  }, [hasMore, isLoading, page, watchPage]);
+
+  if (isLoading) {
     return (
-      <div>
-        {isLoading ? (
-          <LoadingState />
-        ) : (
-          <div className={gridClasses}>
-            {size(rows) > 0 ? <DataState /> : <EmptyState />}
-          </div>
-        )}
+      <div className="flex items-center justify-center min-h-screen">
+        <Spinner color="default" size="lg" />
       </div>
     );
   }
-);
 
-BaseTableContainer.displayName = "BaseTableContainer";
-
-// Type-specific table containers for backward compatibility
-export const MovieTableContainer = forwardRef<
-  BaseTableContainerRef,
-  {
-    rows: readonly UniqueMovie[];
-    totalRecords: number;
-    page: number;
-    handleOpenModal: (recordSelected: UniqueMovie) => void;
-    watchPage: (page: number) => void;
-    emptyContentLabel: JSX.Element;
-    isLoading?: boolean;
-  }
->((props, ref) => (
-  <BaseTableContainer ref={ref} {...props} mediaType="movie" />
-));
-
-export const SerieTableContainer = forwardRef<
-  BaseTableContainerRef,
-  {
-    rows: readonly UniqueSerie[];
-    totalRecords: number;
-    page: number;
-    handleOpenModal: (recordSelected: UniqueSerie) => void;
-    watchPage: (page: number) => void;
-    emptyContentLabel: JSX.Element;
-    isLoading?: boolean;
-  }
->((props, ref) => <BaseTableContainer ref={ref} {...props} mediaType="tv" />);
-
-MovieTableContainer.displayName = "MovieTableContainer";
-SerieTableContainer.displayName = "SerieTableContainer";
+  return (
+    <div>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+        {rows.length > 0 ? (
+          rows.map((item) => (
+            <BaseMediaCard
+              key={item.id}
+              item={item}
+              onOpenModal={handleOpenModal}
+            />
+          ))
+        ) : (
+          <div className="flex justify-center w-full">{emptyContentLabel}</div>
+        )}
+      </div>
+    </div>
+  );
+};

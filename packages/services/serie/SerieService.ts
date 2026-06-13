@@ -1,80 +1,62 @@
 import { Effect } from "effect";
-import qs from "qs";
 
-import HttpClientService from "../http-client/HttpClientService";
-import { SerieFilter } from "src/types";
-import { API_CONFIG, API_ENDPOINTS } from "../../constants";
+import {
+  TMDB_PATHS,
+  TMDB_SEASON_APPEND_TO_RESPONSE,
+  TMDB_SERIE_DISCOVERY_DEFAULTS
+} from "../../constants";
+import { TmdbClient } from "../tmdb";
 
-export default {
-  all: (props: SerieFilter & { with_genres?: number }) => {
-    const query: SerieFilter = {
-      sort_by: API_CONFIG.QUERY_PARAMS.DEFAULT_SORT,
-      api_key: API_CONFIG.TMDB.API_KEY,
-      with_original_language: API_CONFIG.QUERY_PARAMS.ORIGINAL_LANGUAGE,
-      include_adult: API_CONFIG.QUERY_PARAMS.INCLUDE_ADULT,
-      with_type: 4,
-      without_keywords: '210024,9755,272877,197251,6513,287501,290799',
-      ...props,
-    };
+export interface DiscoverSeriesFilter {
+  readonly page: number;
+  readonly with_genres?: number;
+}
 
-    const queryString = qs.stringify(query);
+export interface ChapterLookup {
+  readonly serieId: number;
+  readonly seasonId: number;
+}
 
-    return Effect.gen(function* () {
-      const httpClientService = yield* HttpClientService;
-      return yield* httpClientService.makeRequest(queryString);
-    }).pipe(
-      Effect.provide(
-        HttpClientService.Live({
-          baseUrl: API_ENDPOINTS.SERIES.DISCOVER,
-        })
-      ),
-      Effect.runPromise
-    );
-  },
+/** Series catalog and season/chapter details backed by the TMDB API. */
+export class SerieService extends Effect.Service<SerieService>()(
+  "SerieService",
+  {
+    accessors: true,
+    dependencies: [TmdbClient.Default],
+    effect: Effect.gen(function* () {
+      const tmdb = yield* TmdbClient;
 
-  getSeasonById: (id: number) => {
-    const query = {
-      api_key: API_CONFIG.TMDB.API_KEY,
-    };
+      const discover = (filter: DiscoverSeriesFilter) =>
+        tmdb
+          .get(TMDB_PATHS.DISCOVER_SERIES, {
+            ...TMDB_SERIE_DISCOVERY_DEFAULTS,
+            ...filter
+          })
+          .pipe(Effect.withSpan("SerieService.discover", { attributes: { ...filter } }));
 
-    const queryString = qs.stringify(query);
+      const getSeasonById = (serieId: number) =>
+        tmdb
+          .get(TMDB_PATHS.serieDetails(serieId))
+          .pipe(
+            Effect.withSpan("SerieService.getSeasonById", {
+              attributes: { serieId }
+            })
+          );
 
-    return Effect.gen(function* () {
-      const httpClientService = yield* HttpClientService;
-      return yield* httpClientService.makeRequest(queryString);
-    }).pipe(
-      Effect.provide(
-        HttpClientService.Live({
-          baseUrl: `${API_CONFIG.TMDB.BASE_URL}/tv/${id}?`,
-        })
-      ),
-      Effect.withSpan("getSeasonById", { attributes: { id } }),
-      Effect.runPromise
-    );
-  },
+      const getChapterBySeasonId = ({ serieId, seasonId }: ChapterLookup) =>
+        tmdb
+          .get(
+            TMDB_PATHS.seasonDetails(serieId, seasonId),
+            { append_to_response: TMDB_SEASON_APPEND_TO_RESPONSE },
+            { apiKeyVariant: "alternate" }
+          )
+          .pipe(
+            Effect.withSpan("SerieService.getChapterBySeasonId", {
+              attributes: { serieId, seasonId }
+            })
+          );
 
-  getChapterBySeasonId: ({ serieId, seasonId }: {
-    serieId: number,
-    seasonId: number,
-  }) => {
-    const query = {
-      api_key: API_CONFIG.TMDB.API_KEY_ALT,
-      append_to_response: 'keywords,external_ids'
-    };
-
-    const queryString = qs.stringify(query);
-
-    return Effect.gen(function* () {
-      const httpClientService = yield* HttpClientService;
-      return yield* httpClientService.makeRequest(queryString);
-    }).pipe(
-      Effect.provide(
-        HttpClientService.Live({
-          baseUrl: `${API_CONFIG.TMDB.BASE_URL}/tv/${serieId}/season/${seasonId}?`,
-        })
-      ),
-      Effect.withSpan("getChapterBySeasonId", { attributes: { serieId, seasonId } }),
-      Effect.runPromise
-    );
-  },
-};
+      return { discover, getSeasonById, getChapterBySeasonId } as const;
+    })
+  }
+) {}

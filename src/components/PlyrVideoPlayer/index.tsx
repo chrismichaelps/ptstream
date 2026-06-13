@@ -1,84 +1,55 @@
-import { useState, useImperativeHandle, forwardRef, useRef } from "react";
+import { useMemo, useState } from "react";
 import Plyr from "plyr-react";
 import { X } from "lucide-react";
-import { map, toLower } from "lodash";
-import { Effect, pipe } from "effect";
 
-import { PromoResult } from "../../types";
+import { PromoResult, UniquePromo } from "../../types";
 
 import "plyr-react/plyr.css";
-
-export interface PlyrVideoPlayerRef {
-  play: () => void;
-  pause: () => void;
-  togglePlay: () => void;
-  setVolume: (volume: number) => void;
-  seek: (time: number) => void;
-  toggleFullscreen: () => void;
-  close: () => void;
-  isPlaying: () => boolean;
-  getCurrentTime: () => number;
-  getDuration: () => number;
-}
 
 type PlyrVideoPlayerProps = {
   promo: PromoResult;
   onClosePlayer: () => void;
 };
 
-export const PlyrVideoPlayer = forwardRef<
-  PlyrVideoPlayerRef,
-  PlyrVideoPlayerProps
->(({ promo, onClosePlayer }, ref) => {
+// Plyr treats `sources` as quality variants of ONE video, so we must pick a
+// single promo — preferring the official trailer — rather than passing every
+// teaser/clip TMDB returns.
+const pickBestPromo = (promo: PromoResult): UniquePromo | undefined => {
+  const youtubeVideos = promo.filter(
+    (video) => video.site.toLowerCase() === "youtube"
+  );
+
+  return (
+    youtubeVideos.find((video) => video.type === "Trailer" && video.official) ??
+    youtubeVideos.find((video) => video.type === "Trailer") ??
+    youtubeVideos[0]
+  );
+};
+
+export const PlyrVideoPlayer = ({
+  promo,
+  onClosePlayer,
+}: PlyrVideoPlayerProps) => {
   const [isFloating, setIsFloating] = useState(true);
-  const plyrRef = useRef<any>(null);
 
-  const sources = pipe(
-    Effect.sync(() => promo),
-    Effect.map((values) =>
-      map(
-        values,
-        ({ key, site, size, type }) =>
-          ({
-            src: key,
-            provider: toLower(site),
-            size: size,
-            type: type,
-          }) as Plyr.Source
-      )
-    ),
-    Effect.runSync
-  );
+  const sources = useMemo((): Plyr.Source[] => {
+    const best = pickBestPromo(promo);
+    if (!best) return [];
 
-  const handleClose = () =>
-    pipe(
-      Effect.sync(() => {
-        onClosePlayer();
-        setIsFloating(false);
-      }),
-      Effect.runSync
-    );
+    return [
+      {
+        src: best.key,
+        provider: best.site.toLowerCase(),
+        size: best.size,
+        type: best.type,
+      } as Plyr.Source,
+    ];
+  }, [promo]);
 
-  useImperativeHandle(
-    ref,
-    () => ({
-      play: () => plyrRef.current?.play(),
-      pause: () => plyrRef.current?.pause(),
-      togglePlay: () => plyrRef.current?.togglePlay(),
-      setVolume: (volume: number) => {
-        if (plyrRef.current) plyrRef.current.volume = volume;
-      },
-      seek: (time: number) => {
-        if (plyrRef.current) plyrRef.current.currentTime = time;
-      },
-      toggleFullscreen: () => plyrRef.current?.toggleFullscreen(),
-      close: handleClose,
-      isPlaying: () => plyrRef.current?.playing || false,
-      getCurrentTime: () => plyrRef.current?.currentTime || 0,
-      getDuration: () => plyrRef.current?.duration || 0,
-    }),
-    []
-  );
+  const handleClose = () => {
+    onClosePlayer();
+    setIsFloating(false);
+  };
 
   return (
     <div
@@ -98,7 +69,6 @@ export const PlyrVideoPlayer = forwardRef<
         </button>
       )}
       <Plyr
-        ref={plyrRef}
         source={{
           type: "video",
           sources: sources,
@@ -120,8 +90,6 @@ export const PlyrVideoPlayer = forwardRef<
       />
     </div>
   );
-});
-
-PlyrVideoPlayer.displayName = "PlyrVideoPlayer";
+};
 
 export default PlyrVideoPlayer;

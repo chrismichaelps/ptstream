@@ -1,48 +1,19 @@
-import { useEffect, useState, useImperativeHandle, forwardRef } from "react";
+import { useEffect, useState } from "react";
 import { GithubIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { Effect, pipe } from "effect";
+
 import { UI_DIMENSIONS } from "../../../packages/constants";
 
-export interface FooterRef {
-  show: () => void;
-  hide: () => void;
-  toggle: () => void;
-  isVisible: () => boolean;
-  getCurrentYear: () => number;
-}
-
-const Footer = forwardRef<FooterRef, {}>(({}, ref) => {
+const Footer = () => {
   const { t } = useTranslation();
 
   const currentYear = new Date().getFullYear();
   const [isVisible, setIsVisible] = useState(false);
 
+  // Slide the footer in after mount.
   useEffect(() => {
-    pipe(
-      Effect.sync(() => true),
-      Effect.tap((value) => Effect.sync(() => setIsVisible(value))),
-      Effect.runSync
-    );
+    setIsVisible(true);
   }, []);
-
-  const show = () => setIsVisible(true);
-  const hide = () => setIsVisible(false);
-  const toggle = () => setIsVisible((prev) => !prev);
-  const isVisibleCheck = () => isVisible;
-  const getCurrentYear = () => currentYear;
-
-  useImperativeHandle(
-    ref,
-    () => ({
-      show,
-      hide,
-      toggle,
-      isVisible: isVisibleCheck,
-      getCurrentYear,
-    }),
-    [isVisible, currentYear]
-  );
 
   return (
     <footer
@@ -73,8 +44,6 @@ const Footer = forwardRef<FooterRef, {}>(({}, ref) => {
       </div>
     </footer>
   );
-});
-
-Footer.displayName = "Footer";
+};
 
 export default Footer;

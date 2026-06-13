@@ -1,28 +1,27 @@
-import { Context, Effect, Layer } from "effect";
+import { Effect } from "effect";
 
-export interface StorageService {
-  readonly getItem: (key: string) => Effect.Effect<string | null, never, never>;
-  readonly setItem: (key: string, value: string) => Effect.Effect<void, never, never>;
-  readonly removeItem: (key: string) => Effect.Effect<void, never, never>;
-  readonly clear: () => Effect.Effect<void, never, never>;
-}
+/** Effect-wrapped `localStorage` access. */
+export class StorageService extends Effect.Service<StorageService>()(
+  "StorageService",
+  {
+    accessors: true,
+    sync: () => ({
+      getItem: (key: string) => Effect.sync(() => localStorage.getItem(key)),
 
-export const StorageService = Context.Tag("StorageService")<StorageService, StorageService>();
+      setItem: (key: string, value: string) =>
+        Effect.sync(() => {
+          localStorage.setItem(key, value);
+        }),
 
-const makeStorageService = (): StorageService => ({
-  getItem: (key: string) => Effect.sync(() => localStorage.getItem(key)),
+      removeItem: (key: string) =>
+        Effect.sync(() => {
+          localStorage.removeItem(key);
+        }),
 
-  setItem: (key: string, value: string) => Effect.sync(() => {
-    localStorage.setItem(key, value);
-  }),
-
-  removeItem: (key: string) => Effect.sync(() => {
-    localStorage.removeItem(key);
-  }),
-
-  clear: () => Effect.sync(() => {
-    localStorage.clear();
-  })
-});
-
-export const StorageServiceLive = Layer.succeed(StorageService, makeStorageService());
+      clear: () =>
+        Effect.sync(() => {
+          localStorage.clear();
+        })
+    })
+  }
+) {}

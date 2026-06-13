@@ -1,7 +1,7 @@
 {
   "name": "ptstream",
   "productName": "ptstream",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "ptstream is a simple streaming app for watching movies and series. Its clean design makes it easy to find and enjoy your favorite content.",
   "main": ".vite/build/main.js",
   "scripts": {
@@ -10,7 +10,8 @@
     "makeDebug": "DEBUG=electron-forge:* npm run make",
     "make": "electron-forge make",
     "publish": "electron-forge publish",
-    "lint": "eslint --ext .ts,.tsx ."
+    "lint": "ESLINT_USE_FLAT_CONFIG=false eslint --ext .ts,.tsx .",
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "@electron-forge/cli": "^7.10.2",
@@ -21,20 +22,33 @@
     "@electron-forge/plugin-auto-unpack-natives": "^7.10.2",
     "@electron-forge/plugin-fuses": "^7.10.2",
     "@electron-forge/plugin-vite": "^7.10.2",
+    "@electron-forge/publisher-github": "^7.11.2",
     "@electron/fuses": "^2.0.0",
     "@tailwindcss/postcss": "^4.1.14",
     "@tanstack/router-devtools": "^1.139.12",
     "@tanstack/router-plugin": "^1.139.12",
+    "@types/lodash": "^4.17.20",
+    "@types/qs": "^6.14.0",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
+    "@types/react-helmet": "^6.1.11",
     "@typescript-eslint/eslint-plugin": "^8.46.0",
     "@typescript-eslint/parser": "^8.46.0",
+    "autoprefixer": "^10.4.21",
     "electron": "38.2.2",
     "eslint": "^9.37.0",
     "eslint-plugin-import": "^2.32.0",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.10",
     "ts-node": "^10.9.2",
     "typescript": "~5.9.3",
     "vite": "^7.1.9"
   },
   "keywords": [],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/chrismichaelps/ptstream.git"
+  },
   "author": {
     "name": "Chris Michael",
     "email": "chrisperezsantiago1@gmail.com"
@@ -52,13 +66,6 @@
     "@tanstack/react-query": "^5.90.2",
     "@tanstack/react-router": "^1.139.12",
     "@tanstack/start": "^1.120.20",
-    "@types/lodash": "^4.17.20",
-    "@types/qs": "^6.14.0",
-    "@types/react": "^19.2.2",
-    "@types/react-dom": "^19.2.2",
-    "@types/react-helmet": "^6.1.11",
-    "@types/tailwindcss": "^3.1.0",
-    "autoprefixer": "^10.4.21",
     "effect": "^3.18.4",
     "electron-squirrel-startup": "^1.0.1",
     "framer-motion": "^12.23.24",
@@ -69,9 +76,7 @@
     "lucide-react": "^0.545.0",
     "next-themes": "^0.4.6",
     "node-vibrant": "^4.0.3",
-    "npm": "^11.6.2",
     "plyr-react": "^5.3.0",
-    "postcss": "^8.5.6",
     "prop-types": "^15.8.1",
     "qs": "^6.14.0",
     "react": "^19.2.0",
@@ -79,7 +84,7 @@
     "react-helmet": "^6.1.0",
     "react-i18next": "^16.0.0",
     "react-infinite-scroll-component": "^6.1.0",
-    "tailwindcss": "^3.4.10"
+    "update-electron-app": "^3.2.0"
   },
-  "packageManager": "yarn@1.22.22+sha1.ac34549e6aa8e7ead463a7407e1c7390f61a6610"
+  "packageManager": "pnpm@11.1.3"
 }

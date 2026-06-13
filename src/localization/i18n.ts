@@ -1,20 +1,20 @@
-import i18n from 'i18next';
-import { get, map, split } from 'lodash';
-import { initReactI18next } from 'react-i18next';
+import i18n, { Resource } from "i18next";
+import { initReactI18next } from "react-i18next";
 
-const LANGUAGE_FOLDER = import.meta.glob('./*/index.ts');
+const LANGUAGE_FOLDER = import.meta.glob("./*/index.ts");
 
-const DEFAULT_LANGUAGE = 'en';
+const DEFAULT_LANGUAGE = "en";
 
-const loadTranslations = async () => {
-  const resources: Record<string, any> = {};
+const loadTranslations = async (): Promise<Resource> => {
+  const resources: Resource = {};
 
-  const translationFiles = LANGUAGE_FOLDER
-
-  const languages = map(Object.keys(translationFiles), file => get(split(file, '/'), '[1]'));
+  // "./<lang>/index.ts" → "<lang>"
+  const languages = Object.keys(LANGUAGE_FOLDER)
+    .map((file) => file.split("/")[1])
+    .filter(Boolean);
 
   await Promise.all(
-    map(languages, async (lang) => {
+    languages.map(async (lang) => {
       const translation = (await import(`./${lang}/index.ts`)).default;
       resources[lang] = {
         translation: translation.common.default,
@@ -28,17 +28,14 @@ const loadTranslations = async () => {
 const initI18n = async () => {
   const resources = await loadTranslations();
 
-  i18n
-    .use(initReactI18next)
-    .init({
-      compatibilityJSON: 'v3',
-      resources,
-      fallbackLng: DEFAULT_LANGUAGE,
-      lng: DEFAULT_LANGUAGE,
-      interpolation: {
-        escapeValue: false,
-      },
-    });
+  await i18n.use(initReactI18next).init({
+    resources,
+    fallbackLng: DEFAULT_LANGUAGE,
+    lng: DEFAULT_LANGUAGE,
+    interpolation: {
+      escapeValue: false,
+    },
+  });
 };
 
 initI18n();

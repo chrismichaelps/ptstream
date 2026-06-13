@@ -13,6 +13,3 @@ export * from './ui';
 
 // Application Constants
 export * from './app';
-
-// Configuration Constants
-export * from './config';

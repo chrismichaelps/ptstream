@@ -1,28 +1,28 @@
 import { Effect } from "effect";
-import qs from "qs";
 
-import HttpClientService from "../http-client/HttpClientService";
-import { API_CONFIG } from "../../constants";
+import { TMDB_PATHS } from "../../constants";
+import { TmdbClient } from "../tmdb";
 
-export default {
-  getPromoById: (id: string) => {
-    const query = {
-      api_key: API_CONFIG.TMDB.API_KEY,
-    };
+/** Promotional videos (trailers, teasers) backed by the TMDB API. */
+export class PromoService extends Effect.Service<PromoService>()(
+  "PromoService",
+  {
+    accessors: true,
+    dependencies: [TmdbClient.Default],
+    effect: Effect.gen(function* () {
+      const tmdb = yield* TmdbClient;
 
-    const queryString = qs.stringify(query);
+      /** `mediaPath` is a TMDB media path such as `movie/603` or `tv/1399`. */
+      const getPromoById = (mediaPath: string) =>
+        tmdb
+          .get(TMDB_PATHS.videos(mediaPath))
+          .pipe(
+            Effect.withSpan("PromoService.getPromoById", {
+              attributes: { mediaPath }
+            })
+          );
 
-    return Effect.gen(function* () {
-      const httpClientService = yield* HttpClientService;
-      return yield* httpClientService.makeRequest(queryString);
-    }).pipe(
-      Effect.provide(
-        HttpClientService.Live({
-          baseUrl: `${API_CONFIG.TMDB.BASE_URL}/${id}/videos?`,
-        })
-      ),
-      Effect.withSpan("getPromoById", { attributes: { id } }),
-      Effect.runPromise
-    );
-  },
-};
+      return { getPromoById } as const;
+    })
+  }
+) {}

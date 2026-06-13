@@ -1,0 +1,14 @@
+allowBuilds:
+  '@parcel/watcher': true
+  core-js: true
+  electron: true
+  electron-winstaller: true
+  esbuild: true
+  msgpackr-extract: true
+  lzma-native: true
+  macos-alias: true
+  fs-xattr: true
+blockExoticSubdeps: false
+enablePrePostScripts: true
+nodeLinker: hoisted
+shamefullyHoist: true

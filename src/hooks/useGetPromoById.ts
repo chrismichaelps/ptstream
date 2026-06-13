@@ -1,23 +1,33 @@
-import { useMutation, UseMutationResult } from "@tanstack/react-query";
+import {
+  useMutation,
+  UseMutationOptions,
+  UseMutationResult,
+} from "@tanstack/react-query";
 
+import { AppRuntime } from "../../packages/runtime";
 import { PromoService } from "../../packages/services";
+import { PromoReturnType } from "../types";
 
-const { getPromoById } = PromoService;
-
-type Props = {
+type PromoLookup = {
+  /** TMDB path prefix and id, e.g. `movie/123` or `tv/456`. */
   id: string;
-}
+};
+
+type Options = Omit<
+  UseMutationOptions<PromoReturnType, Error, PromoLookup>,
+  "mutationKey" | "mutationFn"
+>;
 
 const useGetPromoById = (
-  values: any
-): UseMutationResult<ReturnType<typeof getPromoById>, unknown, Props> => {
-  return useMutation({
+  options: Options = {}
+): UseMutationResult<PromoReturnType, Error, PromoLookup> =>
+  useMutation({
     mutationKey: ["UseGetPromoById"],
-    mutationFn: async ({ id }) => {
-      return getPromoById(id);
-    },
-    ...values,
+    mutationFn: ({ id }) =>
+      AppRuntime.runPromise(
+        PromoService.getPromoById(id)
+      ) as Promise<PromoReturnType>,
+    ...options,
   });
-};
 
 export default useGetPromoById;

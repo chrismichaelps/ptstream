@@ -1,22 +1,28 @@
-import { useMutation, UseMutationResult } from "@tanstack/react-query";
+import {
+  useMutation,
+  UseMutationOptions,
+  UseMutationResult,
+} from "@tanstack/react-query";
 
-import { MovieService } from "../../packages/services";
-import { MovieFilter } from "../types";
+import { AppRuntime } from "../../packages/runtime";
+import { MovieService, DiscoverMoviesFilter } from "../../packages/services";
+import { MovieReturnType } from "../types";
 
-const { all } = MovieService;
-
-type Props = MovieFilter & { with_genres?: number };
+type Options = Omit<
+  UseMutationOptions<MovieReturnType, Error, DiscoverMoviesFilter>,
+  "mutationKey" | "mutationFn"
+>;
 
 const useMovies = (
-  values: any
-): UseMutationResult<ReturnType<typeof all>, unknown, Props> => {
-  return useMutation({
+  options: Options = {}
+): UseMutationResult<MovieReturnType, Error, DiscoverMoviesFilter> =>
+  useMutation({
     mutationKey: ["UseAllMovies"],
-    mutationFn: async ({ page, with_genres }) => {
-      return all({ page, with_genres });
-    },
-    ...values,
+    mutationFn: ({ page, with_genres }) =>
+      AppRuntime.runPromise(
+        MovieService.discover({ page, with_genres })
+      ) as Promise<MovieReturnType>,
+    ...options,
   });
-};
 
 export default useMovies;

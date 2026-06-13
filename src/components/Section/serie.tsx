@@ -1,10 +1,4 @@
-import {
-  useCallback,
-  useEffect,
-  useState,
-  useImperativeHandle,
-  forwardRef,
-} from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Badge, Button, Image, Spinner } from "@nextui-org/react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -18,20 +12,14 @@ import {
   Maximize2,
   Minimize2,
 } from "lucide-react";
-import {
-  chain,
-  defaultTo,
-  get,
-  join,
-  map,
-  merge,
-  range,
-  toUpper,
-} from "lodash";
 import { useTranslation } from "react-i18next";
-import qs from "qs";
 
-import { PromoResult, PromoReturnType, UniqueSerie } from "../../types";
+import {
+  PromoResult,
+  SeasonChapters,
+  SeasonEpisode,
+  UniqueSerie,
+} from "../../types";
 import SeriesDropdown from "../../components/SeasonsDropdown";
 import useGetChapterBySeasonId from "../../hooks/useGetChapterBySeasonId";
 import useGetPromoById from "../../hooks/useGetPromoById";
@@ -48,6 +36,22 @@ type SerieSectionProps = {
   item: UniqueSerie;
 };
 
+/** Identifies the episode currently being browsed or streamed. */
+type EpisodeRef = {
+  serieId: number;
+  seasonId: number;
+  episodeId: number;
+};
+
+/**
+ * The section is always in exactly one of these views; the promo player is
+ * an independent overlay on top of any of them.
+ */
+type SectionView =
+  | { kind: "default" }
+  | { kind: "chapter"; episode: EpisodeRef }
+  | { kind: "streaming"; episode: EpisodeRef };
+
 type DefaultStateProps = {
   serie: UniqueSerie;
   onWatchNow: () => void;
@@ -55,24 +59,21 @@ type DefaultStateProps = {
 };
 
 type ChapterStateProps = {
-  chapter: any;
+  chapter: SeasonEpisode;
   serie: UniqueSerie;
-  serieId: number;
-  seasonId: number;
-  episodeId: number;
+  episodeRef: EpisodeRef;
   onWatchNow: () => void;
   onBack: () => void;
 };
 
-type StreamingVideoProps = {
-  serieId: number;
-  seasonId: number;
-  episodeId: number;
+type StreamingVideoProps = EpisodeRef & {
   onBack: () => void;
 };
 
-const renderStars = (rating: number) => {
-  return map(range(1, 6), (i) => (
+const STAR_RATINGS = [1, 2, 3, 4, 5] as const;
+
+const renderStars = (rating: number) =>
+  STAR_RATINGS.map((i) => (
     <Star
       key={i}
       className={`w-5 h-5 ${
@@ -82,6 +83,10 @@ const renderStars = (rating: number) => {
       }`}
     />
   ));
+
+const useGenreKeywords = (serie: UniqueSerie) => {
+  const { t } = useTranslation();
+  return (serie.genre_ids ?? []).map((genreId) => t(`${genreId}`)).join(", ");
 };
 
 const StreamingVideo = ({
@@ -91,23 +96,10 @@ const StreamingVideo = ({
   onBack,
 }: StreamingVideoProps) => {
   const [isLoading, setIsLoading] = useState(true);
-  const [isFloating] = useState(true);
 
   const { toggleFullscreen, isFullscreen } = useFullscreen();
 
-  const onLoad = () => setIsLoading(false);
-
-  // const src = `https://vidsrc.pro/embed/tv/${serieId}/${seasonId}/${episodeId}`;
-
-  const query = {
-    tmdb: serieId,
-    season: seasonId,
-    episode: episodeId,
-    ds_lang: "es",
-  };
-  const queryString = qs.stringify(query);
-
-  const src = `https://vidsrc.xyz/embed/tv?${queryString}`;
+  const src = `https://vidsrc-embed.ru/embed/tv/${serieId}/${seasonId}/${episodeId}?ds_lang=es`;
 
   return (
     <div className="fixed inset-0 text-black bg-gradient-to-br from-black to-gray-900 dark:text-white">
@@ -136,17 +128,13 @@ const StreamingVideo = ({
         </div>
       )}
 
-      <div
-        className={`relative w-full h-full ${
-          isFloating ? "animate-iframe-drop-effect" : ""
-        }`}
-      >
+      <div className="relative w-full h-full animate-iframe-drop-effect">
         <iframe
           src={src}
           className="absolute top-0 left-0 w-full h-full"
           allow="autoplay; fullscreen"
           allowFullScreen
-          onLoad={onLoad}
+          onLoad={() => setIsLoading(false)}
         />
       </div>
     </div>
@@ -156,18 +144,12 @@ const StreamingVideo = ({
 const ChapterState = ({
   chapter,
   serie,
-  serieId,
-  seasonId,
-  episodeId,
+  episodeRef,
   onWatchNow,
   onBack,
 }: ChapterStateProps) => {
   const { t } = useTranslation();
-
-  const genreKeywords = join(
-    map(serie.genre_ids, (genreId) => t(`${genreId}`)),
-    ", "
-  );
+  const genreKeywords = useGenreKeywords(serie);
 
   return (
     <div className="overflow-y-auto max-h-screen text-black dark:text-white">
@@ -216,30 +198,28 @@ const ChapterState = ({
             <div className="flex items-center space-x-4">
               <div className="flex items-center">
                 {renderStars(chapter.vote_average)}
-                {chapter.vote_average && (
+                {chapter.vote_average ? (
                   <span className="ml-2">
                     {chapter.vote_average.toFixed(1)}
                   </span>
-                )}
+                ) : null}
               </div>
-              {chapter.vote_count && (
+              {chapter.vote_count ? (
                 <span className="text-gray-700 dark:text-gray-300">
                   ({chapter.vote_count.toLocaleString()}{" "}
                   {t("Serie_ChapterState_Votes")})
                 </span>
-              )}
+              ) : null}
             </div>
-            {onWatchNow ? (
-              <div className="flex flex-col gap-4 sm:flex-row">
-                <Button
-                  className="bg-primary text-primary-foreground hover:bg-primary/90"
-                  onClick={onWatchNow}
-                >
-                  <PlayCircle className="mr-2 w-4 h-4" />
-                  {t("Serie_ChapterState_WatchNow")}
-                </Button>
-              </div>
-            ) : null}
+            <div className="flex flex-col gap-4 sm:flex-row">
+              <Button
+                className="bg-primary text-primary-foreground hover:bg-primary/90"
+                onPress={onWatchNow}
+              >
+                <PlayCircle className="mr-2 w-4 h-4" />
+                {t("Serie_ChapterState_WatchNow")}
+              </Button>
+            </div>
             <div className="grid grid-cols-2 gap-4 text-sm">
               {chapter.air_date && (
                 <div className="flex items-center">
@@ -248,16 +228,16 @@ const ChapterState = ({
                   {parseDate(chapter.air_date)}
                 </div>
               )}
-              {chapter.runtime && (
+              {chapter.runtime ? (
                 <div className="flex items-center">
                   <Clock className="mr-2 w-4 h-4" />
                   {t("Serie_ChapterState_Runtime")}:{" "}
                   {formatRuntime(chapter.runtime)}
                 </div>
-              )}
+              ) : null}
             </div>
             <div className="grid grid-cols-2 gap-4 text-sm">
-              <ChapterWatchedButton item={{ serieId, seasonId, episodeId }} />
+              <ChapterWatchedButton item={episodeRef} />
             </div>
           </div>
         </div>
@@ -272,19 +252,12 @@ const DefaultState = ({
   watchChapter,
 }: DefaultStateProps) => {
   const { t } = useTranslation();
+  const genreKeywords = useGenreKeywords(serie);
 
   const seasonSelectedState = useSeasonSelected();
   const seasonSelected = seasonSelectedState.get();
 
-  const posterPath = defaultTo(
-    get(seasonSelected, "poster_path"),
-    get(serie, "poster_path", null)
-  );
-
-  const genreKeywords = join(
-    map(serie.genre_ids, (genreId) => t(`${genreId}`)),
-    ", "
-  );
+  const posterPath = seasonSelected?.poster_path ?? serie.poster_path ?? null;
 
   return (
     <div className="overflow-y-auto max-h-screen text-black dark:text-white">
@@ -324,7 +297,7 @@ const DefaultState = ({
               </div>
             )}
             <div className="flex flex-wrap gap-2">
-              {map(serie.genre_ids, (genreId) => (
+              {(serie.genre_ids ?? []).map((genreId) => (
                 <Badge
                   key={genreId}
                   className="text-black bg-gray-200 dark:bg-gray-700 dark:text-white"
@@ -336,21 +309,21 @@ const DefaultState = ({
             <div className="flex items-center space-x-4">
               <div className="flex items-center">
                 {renderStars(serie.vote_average)}
-                {serie.vote_average && (
+                {serie.vote_average ? (
                   <span className="ml-2">{serie.vote_average.toFixed(1)}</span>
-                )}
+                ) : null}
               </div>
-              {serie.vote_count && (
+              {serie.vote_count ? (
                 <span className="text-gray-700 dark:text-gray-300">
                   ({serie.vote_count.toLocaleString()}{" "}
                   {t("Serie_DefaultState_Votes")})
                 </span>
-              )}
+              ) : null}
             </div>
             <div className="flex flex-col gap-4 sm:flex-row">
               <Button
                 className="bg-primary text-primary-foreground hover:bg-primary/90"
-                onClick={onWatchNow}
+                onPress={onWatchNow}
               >
                 <PlayCircle className="mr-2 w-4 h-4" />
                 {t("Serie_DefaultState_WatchPromo")}
@@ -369,16 +342,16 @@ const DefaultState = ({
                 <div className="flex items-center">
                   <Globe className="mr-2 w-4 h-4" />
                   {t("Serie_DefaultState_Language")}:{" "}
-                  {toUpper(serie.original_language)}
+                  {serie.original_language.toUpperCase()}
                 </div>
               )}
-              {serie.popularity && (
+              {serie.popularity ? (
                 <div className="flex items-center">
                   <ThumbsUp className="mr-2 w-4 h-4" />
                   {t("Serie_DefaultState_Popularity")}:{" "}
                   {serie.popularity.toFixed(2)}
                 </div>
-              )}
+              ) : null}
               {serie.adult && (
                 <div className="flex items-center">
                   <Badge>{t("AdultContent")}</Badge>
@@ -392,165 +365,84 @@ const DefaultState = ({
   );
 };
 
-export interface SerieSectionRef {
-  startWatching: () => void;
-  stopWatching: () => void;
-  watchPromo: () => void;
-  closePromo: () => void;
-  watchChapter: (serieId: number, seasonId: number, episodeId: number) => void;
-  backToSeason: () => void;
-  isWatching: () => boolean;
-  isPromoOpen: () => boolean;
-  getSerieInfo: () => UniqueSerie;
-  refreshPromo: () => void;
-  getCurrentChapter: () => any;
-}
+export const Section = ({ item: serie }: SerieSectionProps) => {
+  const [view, setView] = useState<SectionView>({ kind: "default" });
+  const [watchPromo, setWatchPromo] = useState(false);
+  const [chapters, setChapters] = useState<SeasonChapters | null>(null);
+  const [promo, setPromo] = useState<PromoResult>([]);
 
-export const Section = forwardRef<SerieSectionRef, SerieSectionProps>(
-  ({ item }, ref) => {
-    const [watchNow, setWatchNow] = useState(false);
-    const [watchPromo, setWatchPromo] = useState(false);
-    const [backToSeason, setBackToSeason] = useState(false);
-    const [serieId, setSerieId] = useState<number>();
-    const [seasonId, setSeasonId] = useState<number>();
-    const [episodeId, setEpisodeId] = useState<number>();
-    const [chapter, setChapter] = useState<any>(null);
-    const [promo, setPromo] = useState<PromoResult>();
-    const serie = item;
+  const seasonSelectedState = useSeasonSelected();
 
-    const seasonSelectedState = useSeasonSelected();
+  const { mutate: mutateChapter } = useGetChapterBySeasonId({
+    onSuccess: (data) => {
+      setChapters(data);
+    },
+    onError: (error: Error) => {
+      console.error("Error fetching chapter by season id:", error);
+    },
+  });
 
-    const handleBack = () => {
-      setWatchNow(false);
-    };
+  const { mutate: mutatePromo } = useGetPromoById({
+    onSuccess: (data) => {
+      setPromo(data.results ?? []);
+    },
+    onError: (error: Error) => {
+      console.error("Error fetching promo by season id:", error);
+    },
+  });
 
-    const handleBackToSeason = () => {
-      setBackToSeason(true);
-      seasonSelectedState.clear();
-    };
+  // get promo for a particular serie
+  useEffect(() => {
+    if (serie.id) {
+      mutatePromo({ id: `tv/${serie.id}` });
+    }
+  }, [serie.id, mutatePromo]);
 
-    const { mutate: mutateChapter } = useGetChapterBySeasonId({
-      onSuccess: (data: any) => {
-        setChapter(data);
-      },
-      onError: (error: Error) => {
-        console.error("Error fetching chapter by season id:", error);
-      },
-    });
+  const watchChapter = useCallback(
+    (serieId: number, seasonId: number, episodeId: number) => {
+      setView({ kind: "chapter", episode: { serieId, seasonId, episodeId } });
+      mutateChapter({ serieId, seasonId });
+    },
+    [mutateChapter],
+  );
 
-    const { mutate: mutatePromo } = useGetPromoById({
-      onSuccess: (data: PromoReturnType) => {
-        setPromo(data.results);
-      },
-      onError: (error: Error) => {
-        console.error("Error fetching promo by season id:", error);
-      },
-    });
+  const handleBackToSeason = () => {
+    setView({ kind: "default" });
+    setChapters(null);
+    seasonSelectedState.clear();
+  };
 
-    const watchChapter = useCallback(
-      (serieId: number, seasonId: number, episodeId: number) => {
-        setSerieId(serieId);
-        setSeasonId(seasonId);
-        setEpisodeId(episodeId);
+  const episodeRef = view.kind === "default" ? null : view.episode;
 
-        mutateChapter({
-          serieId: serieId,
-          seasonId: seasonId,
-        });
-      },
-      [mutateChapter]
-    );
-
-    const episode = chain(get(chapter, "episodes", []))
-      .find((episode) => episode && episode.episode_number === episodeId)
-      .value();
-
-    const reset = () => {
-      setWatchNow(false);
-      setBackToSeason(false);
-      setChapter(null);
-      setEpisodeId(null);
-      setSeasonId(null);
-      setSerieId(null);
-    };
-
-    // get promo for a particular serie
-    useEffect(() => {
-      if (serie.id) {
-        mutatePromo({ id: `tv/${serie.id}` });
-      }
-    }, [serie.id]);
-
-    // reset state when back to season
-    useEffect(() => {
-      if (backToSeason) {
-        reset();
-      }
-    }, [backToSeason]);
-
-    // Imperative methods
-    const startWatching = () => {
-      setWatchNow(true);
-    };
-
-    const stopWatching = () => {
-      setWatchNow(false);
-    };
-
-    const openPromo = () => {
-      setWatchPromo(true);
-    };
-
-    const closePromo = () => {
-      setWatchPromo(false);
-    };
-
-    const openChapter = (
-      serieId: number,
-      seasonId: number,
-      episodeId: number
-    ) => {
-      setSerieId(serieId);
-      setSeasonId(seasonId);
-      setEpisodeId(episodeId);
-      setBackToSeason(false);
-    };
-
-    const goBackToSeason = () => {
-      setBackToSeason(true);
-    };
-
-    const isWatching = () => watchNow;
-    const isPromoOpen = () => watchPromo;
-    const getSerieInfo = () => serie;
-    const refreshPromo = () => {
-      if (serie.id) {
-        mutatePromo({ id: `tv/${serie.id}` });
-      }
-    };
-    const getCurrentChapter = () => episode;
-
-    useImperativeHandle(
-      ref,
-      () => ({
-        startWatching,
-        stopWatching,
-        watchPromo: openPromo,
-        closePromo,
-        watchChapter: openChapter,
-        backToSeason: goBackToSeason,
-        isWatching,
-        isPromoOpen,
-        getSerieInfo,
-        refreshPromo,
-        getCurrentChapter,
-      }),
-      [watchNow, watchPromo, serie, episode, mutatePromo]
-    );
-
+  const currentEpisode = useMemo(() => {
+    if (!episodeRef) return null;
     return (
-      <div className="relative">
-        {watchPromo ? (
+      chapters?.episodes?.find(
+        (episode) => episode.episode_number === episodeRef.episodeId,
+      ) ?? null
+    );
+  }, [chapters, episodeRef]);
+
+  const isStreaming = view.kind === "streaming";
+
+  return (
+    <div className="relative">
+      {watchPromo ? (
+        <motion.div
+          key="streaming"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
+          transition={{ duration: 0.3 }}
+        >
+          <PlyrVideoPlayer
+            promo={promo}
+            onClosePlayer={() => setWatchPromo(false)}
+          />
+        </motion.div>
+      ) : null}
+      <AnimatePresence>
+        {isStreaming && episodeRef ? (
           <motion.div
             key="streaming"
             initial={{ opacity: 0, y: 20 }}
@@ -558,64 +450,42 @@ export const Section = forwardRef<SerieSectionRef, SerieSectionProps>(
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.3 }}
           >
-            <PlyrVideoPlayer
-              promo={promo}
-              onClosePlayer={() => setWatchPromo(false)}
+            <StreamingVideo
+              {...episodeRef}
+              onBack={() => setView({ kind: "chapter", episode: episodeRef })}
             />
           </motion.div>
-        ) : null}
-        <AnimatePresence>
-          {watchNow ? (
-            <motion.div
-              key="streaming"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-            >
-              <StreamingVideo
-                serieId={serieId}
-                seasonId={seasonId}
-                episodeId={episodeId}
-                onBack={handleBack}
+        ) : (
+          <motion.div
+            key="default"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.3 }}
+          >
+            {view.kind === "chapter" && episodeRef && currentEpisode ? (
+              <ChapterState
+                chapter={currentEpisode}
+                serie={serie}
+                episodeRef={episodeRef}
+                onWatchNow={() =>
+                  setView({ kind: "streaming", episode: episodeRef })
+                }
+                onBack={handleBackToSeason}
               />
-            </motion.div>
-          ) : (
-            <motion.div
-              key="default"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-            >
-              {!chapter || backToSeason ? (
-                <DefaultState
-                  serie={serie}
-                  onWatchNow={() => setWatchPromo(true)}
-                  watchChapter={(serieId, seasonId, episodeId) =>
-                    watchChapter(serieId, seasonId, episodeId)
-                  }
-                />
-              ) : (
-                <ChapterState
-                  chapter={episode}
-                  serie={serie}
-                  serieId={serieId}
-                  seasonId={seasonId}
-                  episodeId={episodeId}
-                  onWatchNow={() => setWatchNow(true)}
-                  onBack={handleBackToSeason}
-                />
-              )}
-            </motion.div>
-          )}
-          {watchNow ? null : (
-            <FavoriteButton item={merge(item, { media_type: "tv" })} />
-          )}
-        </AnimatePresence>
-      </div>
-    );
-  }
-);
-
-Section.displayName = "SerieSection";
+            ) : (
+              <DefaultState
+                serie={serie}
+                onWatchNow={() => setWatchPromo(true)}
+                watchChapter={watchChapter}
+              />
+            )}
+          </motion.div>
+        )}
+        {isStreaming ? null : (
+          <FavoriteButton item={{ ...serie, media_type: "tv" }} />
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};

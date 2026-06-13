@@ -22,5 +22,5 @@ export type { StoreState, StoreAction, StoreMiddleware, StoreConfig, Store } fro
 // Reducers
 export * from './reducers';
 
-// Middleware (re-export from services)
-export { createLoggerMiddleware, createDevToolsMiddleware } from '../services/logger';
+// Middleware
+export { createLoggerMiddleware, createDevToolsMiddleware } from './middleware';
