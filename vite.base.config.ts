@@ -1,11 +1,19 @@
 import { builtinModules } from 'node:module';
 import type { AddressInfo } from 'node:net';
 import type { ConfigEnv, Plugin, UserConfig } from 'vite';
-import pkg from './package.json';
 
 export const builtins = ['electron', ...builtinModules.map((m) => [m, `node:${m}`]).flat()];
 
-export const external = [...builtins, ...Object.keys('dependencies' in pkg ? (pkg.dependencies as Record<string, unknown>) : {})];
+// Only externalize Electron and Node.js built-ins. Every npm dependency used
+// by the main/preload process is BUNDLED into the output instead of left as a
+// runtime `require`. This is deliberate: @electron/packager + pnpm ship an
+// asar with ZERO node_modules, so any externalized dependency (e.g.
+// @cliqz/adblocker-electron) crashes the packaged app with
+// "Cannot find module '<dep>'". Bundling removes the runtime dependency on
+// node_modules entirely. (All main-process deps here are pure JS — no native
+// modules — so bundling is safe. Revisit if a native dep is added: those must
+// stay external and be unpacked via @electron-forge/plugin-auto-unpack-natives.)
+export const external = [...builtins];
 
 export function getBuildConfig(env: ConfigEnv<'build'>): UserConfig {
   const { root, mode, command } = env;
