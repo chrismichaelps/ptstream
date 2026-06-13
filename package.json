@@ -1,7 +1,7 @@
 {
   "name": "ptstream",
   "productName": "ptstream",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "ptstream is a simple streaming app for watching movies and series. Its clean design makes it easy to find and enjoy your favorite content.",
   "main": ".vite/build/main.js",
   "scripts": {
