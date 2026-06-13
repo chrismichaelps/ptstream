@@ -71,3 +71,4 @@ Do not reuse a version number that has ever been published — Squirrel caches b
 - `update.electronjs.org` only works for **public** repos. If the repo ever goes private, switch the updater to `UpdateSourceType.StaticStorage` (S3/R2) or self-host [Nucleus](https://github.com/atlassian/nucleus)/[Hazel](https://github.com/vercel/hazel).
 - The `version` in `package.json` is the single source of truth; tags are created by the publisher, never by hand.
 - Linux auto-update is intentionally out of scope (no Squirrel support); revisit with AppImage + electron-updater if Linux demand grows.
+- **CI builds run on Node 22 (LTS) — do not bump to Node 24.** On Node 24, electron-forge 7.11.2 packaging exits 0 partway through "Finalizing package" and produces **no distributables**, so the publish job goes green while creating no release. Verified working on Node 22 and 25, broken on 24. If artifacts ever stop appearing despite green jobs, check the Node version first.
