@@ -62,7 +62,10 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 24
+          # Node 22 (LTS). Do not bump to 24: electron-forge 7.11.2 packaging
+          # exits 0 mid-"Finalizing package" on Node 24, producing no
+          # distributables and publishing nothing. Verified on 22 and 25.
+          node-version: 22
           cache: pnpm
 
       - name: Install Linux packaging tools
