@@ -1,7 +1,7 @@
 {
   "name": "ptstream",
   "productName": "ptstream",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "ptstream is a simple streaming app for watching movies and series. Its clean design makes it easy to find and enjoy your favorite content.",
   "main": ".vite/build/main.js",
   "scripts": {
@@ -9,6 +9,9 @@
     "package": "electron-forge package",
     "makeDebug": "DEBUG=electron-forge:* npm run make",
     "make": "electron-forge make",
+    "package:mac": "electron-forge package --platform=darwin --arch=arm64",
+    "verify:mac": "scripts/verify-macos-signature.sh",
+    "build:mac": "pnpm run package:mac && pnpm run verify:mac",
     "publish": "electron-forge publish",
     "lint": "ESLINT_USE_FLAT_CONFIG=false eslint --ext .ts,.tsx .",
     "typecheck": "tsc --noEmit"

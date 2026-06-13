@@ -1,3 +1,5 @@
+import { execFileSync } from 'node:child_process';
+import path from 'node:path';
 import type { ForgeConfig } from '@electron-forge/shared-types';
 import { MakerSquirrel } from '@electron-forge/maker-squirrel';
 import { MakerZIP } from '@electron-forge/maker-zip';
@@ -16,6 +18,33 @@ const config: ForgeConfig = {
     // osxSign: {}
   },
   rebuildConfig: {},
+  hooks: {
+    // Re-apply a valid ad-hoc signature to the FINAL macOS bundle.
+    //
+    // Why this is needed (and why the Fuses plugin alone isn't enough):
+    // @electron/packager copies a generic `Electron.app`, then the Fuses
+    // plugin flips fuses + ad-hoc re-signs it during `packageAfterCopy`.
+    // AFTER that, packager renames the bundle to `ptstream.app`, renames the
+    // executable, and rewrites Info.plist — which INVALIDATES that signature
+    // (`codesign` reports "Info.plist not bound"). With no `osxSign` config,
+    // packager never re-signs, so the shipped arm64 app has a broken
+    // signature. On Apple Silicon that triggers the misleading
+    // "ptstream is damaged and can't be opened" Gatekeeper error for everyone
+    // who downloads the release.
+    //
+    // `postPackage` runs after packager finishes all renaming/plist edits, so
+    // signing here seals the final bundle. Ad-hoc (`--sign -`) is free — no
+    // Apple Developer ID — users just right-click > Open the first time.
+    postPackage: async (_forgeConfig, { platform, outputPaths }) => {
+      if (platform !== 'darwin') return;
+      for (const outputPath of outputPaths) {
+        const appPath = path.join(outputPath, 'ptstream.app');
+        execFileSync('codesign', ['--force', '--deep', '--sign', '-', appPath], {
+          stdio: 'inherit',
+        });
+      }
+    },
+  },
   makers: [new MakerSquirrel({}), new MakerZIP({}, ['darwin']), new MakerRpm({}), new MakerDeb({})],
   publishers: [
     new PublisherGithub({
@@ -56,13 +85,6 @@ const config: ForgeConfig = {
     // at package time, before code signing the application
     new FusesPlugin({
       version: FuseVersion.V1,
-      // Flipping fuses rewrites the Electron binary, which invalidates the
-      // ad-hoc signature it ships with. On Apple Silicon an unsigned/broken
-      // signature + quarantine flag triggers the misleading
-      // "ptstream is damaged and can't be opened" Gatekeeper error.
-      // Re-apply an ad-hoc signature here so the packaged .app stays valid.
-      // (Free, no Apple Developer ID — users still right-click > Open once.)
-      resetAdHocDarwinSignature: true,
       [FuseV1Options.RunAsNode]: false,
       [FuseV1Options.EnableCookieEncryption]: true,
       [FuseV1Options.EnableNodeOptionsEnvironmentVariable]: false,
