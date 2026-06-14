@@ -1,38 +1,15 @@
 import { Layer } from "effect";
 
-import {
-  MovieService,
-  PromoService,
-  SearchService,
-  SerieService,
-  StorageService
-} from "../services";
+import { StorageService } from "../services";
 
 /**
- * Application dependency graph.
+ * Renderer-side service graph.
  *
- * Each domain service declares its own dependencies (`dependencies: [...]`
- * in its `Effect.Service` definition), so composing the top of the graph is
- * enough — Effect wires and memoizes the rest:
- *
- *   tmdbConfig ─┐                  ┌─ httpConfig
- *               ▼                  ▼
- *               │             HttpClient
- *               │                  │
- *               └────► TmdbClient ◄┘
- *        ┌────────────┬─────┴──────┬────────────┐
- *        ▼            ▼            ▼            ▼
- *  MovieService  SerieService  SearchService  PromoService    StorageService
- *
- * `HttpClient` and `TmdbClient` are shared singletons: Layer memoization
- * guarantees a single instance regardless of how many services depend on them.
+ * Only browser-backed services live here now — `StorageService` wraps
+ * `localStorage`. The TMDB network services (Movie/Serie/Search/Promo) moved to
+ * the main process (see `./tmdb` and `src/ipc`) and are reached over IPC, so the
+ * renderer bundle no longer contains TMDB request code or API keys.
  */
-export const AppLayer = Layer.mergeAll(
-  MovieService.Default,
-  SerieService.Default,
-  SearchService.Default,
-  PromoService.Default,
-  StorageService.Default
-);
+export const AppLayer = Layer.mergeAll(StorageService.Default);
 
 export type AppServices = Layer.Layer.Success<typeof AppLayer>;

@@ -4,8 +4,7 @@ import {
   UseMutationResult,
 } from "@tanstack/react-query";
 
-import { AppRuntime } from "../../packages/runtime";
-import { SerieService, DiscoverSeriesFilter } from "../../packages/services";
+import type { DiscoverSeriesFilter } from "../../packages/services";
 import { SerieReturnType } from "../types";
 
 type Options = Omit<
@@ -13,15 +12,16 @@ type Options = Omit<
   "mutationKey" | "mutationFn"
 >;
 
+/**
+ * Discover series. Fetching + caching happen in the main process; this hook is
+ * a thin React Query wrapper over the `window.tmdbApi` IPC bridge.
+ */
 const useSeries = (
   options: Options = {}
 ): UseMutationResult<SerieReturnType, Error, DiscoverSeriesFilter> =>
   useMutation({
     mutationKey: ["UseAllSeries"],
-    mutationFn: ({ page, with_genres }) =>
-      AppRuntime.runPromise(
-        SerieService.discover({ page, with_genres })
-      ) as Promise<SerieReturnType>,
+    mutationFn: (filter) => window.tmdbApi.discoverSeries(filter),
     ...options,
   });
 

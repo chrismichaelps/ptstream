@@ -4,8 +4,6 @@ import {
   UseMutationResult,
 } from "@tanstack/react-query";
 
-import { AppRuntime } from "../../packages/runtime";
-import { PromoService } from "../../packages/services";
 import { PromoReturnType } from "../types";
 
 type PromoLookup = {
@@ -18,15 +16,17 @@ type Options = Omit<
   "mutationKey" | "mutationFn"
 >;
 
+/**
+ * Fetch a title's promo (trailer) by id. Fetching + caching happen in the main
+ * process; this hook is a thin React Query wrapper over the `window.tmdbApi`
+ * IPC bridge.
+ */
 const useGetPromoById = (
   options: Options = {}
 ): UseMutationResult<PromoReturnType, Error, PromoLookup> =>
   useMutation({
     mutationKey: ["UseGetPromoById"],
-    mutationFn: ({ id }) =>
-      AppRuntime.runPromise(
-        PromoService.getPromoById(id)
-      ) as Promise<PromoReturnType>,
+    mutationFn: ({ id }) => window.tmdbApi.getPromoById(id),
     ...options,
   });
 

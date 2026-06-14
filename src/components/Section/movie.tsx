@@ -18,7 +18,7 @@ import { PromoResult, UniqueMovie } from "../../types";
 import { parseDate } from "../../toolkit/serie";
 import Banner from "../Banner";
 import useGetPromoById from "../../hooks/useGetPromoById";
-import PlyrVideoPlayer from "../PlyrVideoPlayer";
+import { PlyrVideoPlayer } from "../PlyrVideoPlayer";
 import FavoriteButton from "../FavoriteButton";
 import { useFullscreen } from "../../hooks/useFullscreen";
 import SeoContainer from "../SeoContainer";

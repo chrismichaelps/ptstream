@@ -25,7 +25,7 @@ import useGetChapterBySeasonId from "../../hooks/useGetChapterBySeasonId";
 import useGetPromoById from "../../hooks/useGetPromoById";
 import { formatRuntime, parseDate } from "../../toolkit/serie";
 import Banner from "../Banner";
-import PlyrVideoPlayer from "../PlyrVideoPlayer";
+import { PlyrVideoPlayer } from "../PlyrVideoPlayer";
 import FavoriteButton from "../FavoriteButton";
 import ChapterWatchedButton from "../ChapterWatchedButton";
 import useSeasonSelected from "../../hooks/useSeasonSelected";

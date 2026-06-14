@@ -4,8 +4,6 @@ import {
   UseMutationResult,
 } from "@tanstack/react-query";
 
-import { AppRuntime } from "../../packages/runtime";
-import { SerieService } from "../../packages/services";
 import { SerieSeasonsResult } from "../types";
 
 type Options = Omit<
@@ -13,15 +11,16 @@ type Options = Omit<
   "mutationKey" | "mutationFn"
 >;
 
+/**
+ * Fetch a serie's seasons by id. Fetching + caching happen in the main process;
+ * this hook is a thin React Query wrapper over the `window.tmdbApi` IPC bridge.
+ */
 const useGetSeasonById = (
   options: Options = {}
 ): UseMutationResult<SerieSeasonsResult, Error, number> =>
   useMutation({
     mutationKey: ["UseGetSeasonById"],
-    mutationFn: (id) =>
-      AppRuntime.runPromise(
-        SerieService.getSeasonById(id)
-      ) as Promise<SerieSeasonsResult>,
+    mutationFn: (id) => window.tmdbApi.getSeasonById(id),
     ...options,
   });
 

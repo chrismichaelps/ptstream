@@ -4,8 +4,7 @@ import {
   UseMutationResult,
 } from "@tanstack/react-query";
 
-import { AppRuntime } from "../../packages/runtime";
-import { SerieService, ChapterLookup } from "../../packages/services";
+import type { ChapterLookup } from "../../packages/services";
 import { SeasonChapters } from "../types";
 
 type Options = Omit<
@@ -13,15 +12,16 @@ type Options = Omit<
   "mutationKey" | "mutationFn"
 >;
 
+/**
+ * Fetch a season's chapters. Fetching + caching happen in the main process;
+ * this hook is a thin React Query wrapper over the `window.tmdbApi` IPC bridge.
+ */
 const useGetChapterBySeasonId = (
   options: Options = {}
 ): UseMutationResult<SeasonChapters, Error, ChapterLookup> =>
   useMutation({
     mutationKey: ["UseGetChapterBySeasonId"],
-    mutationFn: ({ serieId, seasonId }) =>
-      AppRuntime.runPromise(
-        SerieService.getChapterBySeasonId({ serieId, seasonId })
-      ) as Promise<SeasonChapters>,
+    mutationFn: (lookup) => window.tmdbApi.getChapterBySeasonId(lookup),
     ...options,
   });
 

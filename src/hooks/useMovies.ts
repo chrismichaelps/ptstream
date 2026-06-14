@@ -4,8 +4,7 @@ import {
   UseMutationResult,
 } from "@tanstack/react-query";
 
-import { AppRuntime } from "../../packages/runtime";
-import { MovieService, DiscoverMoviesFilter } from "../../packages/services";
+import type { DiscoverMoviesFilter } from "../../packages/services";
 import { MovieReturnType } from "../types";
 
 type Options = Omit<
@@ -13,15 +12,16 @@ type Options = Omit<
   "mutationKey" | "mutationFn"
 >;
 
+/**
+ * Discover movies. Fetching + caching happen in the main process; this hook is
+ * a thin React Query wrapper over the `window.tmdbApi` IPC bridge.
+ */
 const useMovies = (
   options: Options = {}
 ): UseMutationResult<MovieReturnType, Error, DiscoverMoviesFilter> =>
   useMutation({
     mutationKey: ["UseAllMovies"],
-    mutationFn: ({ page, with_genres }) =>
-      AppRuntime.runPromise(
-        MovieService.discover({ page, with_genres })
-      ) as Promise<MovieReturnType>,
+    mutationFn: (filter) => window.tmdbApi.discoverMovies(filter),
     ...options,
   });
 

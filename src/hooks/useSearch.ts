@@ -4,24 +4,11 @@ import {
   UseMutationResult,
 } from "@tanstack/react-query";
 
-import { AppRuntime } from "../../packages/runtime";
-import { SearchService } from "../../packages/services";
-import { UniqueMovie, UniqueSerie } from "../types";
+import type { SearchReturnType } from "../ipc/contract";
 
-/**
- * Raw multi-search result: TMDB also returns `person` entries, which the
- * app filters out before storing.
- */
-export type RawSearchMediaItem = (UniqueMovie | UniqueSerie) & {
-  media_type: "movie" | "tv" | "person";
-};
-
-export type SearchReturnType = {
-  page: number;
-  results?: ReadonlyArray<RawSearchMediaItem>;
-  total_pages: number;
-  total_results?: number;
-};
+// Re-export the shared search types so existing importers (useSearchHandler)
+// keep working; the canonical definitions now live in the IPC contract.
+export type { RawSearchMediaItem, SearchReturnType } from "../ipc/contract";
 
 type SearchProps = {
   q: string;
@@ -32,15 +19,16 @@ type Options = Omit<
   "mutationKey" | "mutationFn"
 >;
 
+/**
+ * Multi-search. Fetching + caching happen in the main process; this hook is a
+ * thin React Query wrapper over the `window.tmdbApi` IPC bridge.
+ */
 const useSearch = (
   options: Options = {}
 ): UseMutationResult<SearchReturnType, Error, SearchProps> =>
   useMutation({
     mutationKey: ["UseSearch"],
-    mutationFn: ({ q }) =>
-      AppRuntime.runPromise(
-        SearchService.multi({ query: q })
-      ) as Promise<SearchReturnType>,
+    mutationFn: ({ q }) => window.tmdbApi.searchMulti(q),
     ...options,
   });
 

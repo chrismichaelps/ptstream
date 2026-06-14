@@ -109,20 +109,27 @@ export const BaseTableContainer = ({
     );
   }
 
+  // Empty state lives OUTSIDE the grid: as a grid item it would only span the
+  // first column (so `w-full` fills one cell, not the row), leaving it stuck
+  // top-left. A full-width, screen-height flex box centers it in the scene.
+  if (rows.length === 0) {
+    return (
+      <div className="flex items-center justify-center w-full min-h-screen">
+        {emptyContentLabel}
+      </div>
+    );
+  }
+
   return (
     <div>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-        {rows.length > 0 ? (
-          rows.map((item) => (
-            <BaseMediaCard
-              key={item.id}
-              item={item}
-              onOpenModal={handleOpenModal}
-            />
-          ))
-        ) : (
-          <div className="flex justify-center w-full">{emptyContentLabel}</div>
-        )}
+        {rows.map((item) => (
+          <BaseMediaCard
+            key={item.id}
+            item={item}
+            onOpenModal={handleOpenModal}
+          />
+        ))}
       </div>
     </div>
   );

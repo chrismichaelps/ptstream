@@ -28,6 +28,9 @@ const loadTranslations = async (): Promise<Resource> => {
 const initI18n = async () => {
   const resources = await loadTranslations();
 
+  // `i18n.use` is the instance chaining API; the lint rule false-positives
+  // because i18next also exposes a standalone `use` named export.
+  // eslint-disable-next-line import/no-named-as-default-member
   await i18n.use(initReactI18next).init({
     resources,
     fallbackLng: DEFAULT_LANGUAGE,
