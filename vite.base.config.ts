@@ -4,15 +4,17 @@ import type { ConfigEnv, Plugin, UserConfig } from 'vite';
 
 export const builtins = ['electron', ...builtinModules.map((m) => [m, `node:${m}`]).flat()];
 
-// Only externalize Electron and Node.js built-ins. Every npm dependency used
-// by the main/preload process is BUNDLED into the output instead of left as a
-// runtime `require`. This is deliberate: @electron/packager + pnpm ship an
-// asar with ZERO node_modules, so any externalized dependency (e.g.
-// @cliqz/adblocker-electron) crashes the packaged app with
-// "Cannot find module '<dep>'". Bundling removes the runtime dependency on
-// node_modules entirely. (All main-process deps here are pure JS — no native
-// modules — so bundling is safe. Revisit if a native dep is added: those must
-// stay external and be unpacked via @electron-forge/plugin-auto-unpack-natives.)
+// Only externalize Electron + Node built-ins; BUNDLE every npm dependency into
+// the main/preload output. This keeps the packaged app small (renderer deps are
+// already bundled by the renderer build, so shipping node_modules too would
+// double the size).
+//
+// The one exception this creates: @cliqz/adblocker-electron does
+// `require.resolve('@cliqz/adblocker-electron-preload')` at runtime to hand
+// Electron an on-disk preload path. That resolve can't be bundled, so
+// forge.config.ts ships ONLY the @cliqz/adblocker-electron-preload subtree into
+// the packaged node_modules to satisfy it. All other main-process deps are pure
+// JS and bundle cleanly.
 export const external = [...builtins];
 
 export function getBuildConfig(env: ConfigEnv<'build'>): UserConfig {
@@ -24,7 +26,7 @@ export function getBuildConfig(env: ConfigEnv<'build'>): UserConfig {
     build: {
       // Prevent multiple builds from interfering with each other.
       emptyOutDir: false,
-      // 🚧 Multiple builds may conflict.
+      // Multiple builds may conflict.
       outDir: '.vite/build',
       watch: command === 'serve' ? {} : null,
       minify: command === 'build',

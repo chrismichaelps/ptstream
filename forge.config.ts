@@ -14,6 +14,25 @@ const config: ForgeConfig = {
   packagerConfig: {
     name: 'ptstream',
     asar: true,
+    // The Vite plugin would otherwise auto-set `ignore` to exclude EVERYTHING
+    // except `/.vite`. We keep that (the app is fully bundled by Vite — see
+    // vite.base.config.ts) but ALSO ship one extra subtree:
+    // @cliqz/adblocker-electron (bundled into main.js) calls
+    // `require.resolve('@cliqz/adblocker-electron-preload')` at runtime to give
+    // Electron an on-disk preload path. That resolve needs the package
+    // physically present, so we keep just that 160 KB subtree (and its declared
+    // dep @cliqz/adblocker-content) in node_modules. Everything else stays
+    // bundled, keeping the package small.
+    prune: false,
+    ignore: (file: string) => {
+      if (!file) return false; // keep the app root itself
+      if (file === '/package.json' || file.startsWith('/.vite')) return false;
+      // Keep only the adblocker preload subtree inside node_modules.
+      if (file === '/node_modules' || file === '/node_modules/@cliqz') return false;
+      if (file.startsWith('/node_modules/@cliqz/adblocker-electron-preload')) return false;
+      if (file.startsWith('/node_modules/@cliqz/adblocker-content')) return false;
+      return true; // ignore everything else
+    },
     // If you are not signing, you can comment this out
     // osxSign: {}
   },
